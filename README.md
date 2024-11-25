@@ -1,28 +1,27 @@
 # Wizard Online
 
-An online multiplayer version of the card game "Wizard" by Ken Fisher.
+A real-time multiplayer implementation of the Wizard card game.
+
+## Features
+- Real-time multiplayer gameplay
+- WebSocket-based communication
+- Cloudflare Workers for hosting
+- React frontend with Tailwind CSS
 
 ## Development
-
-1. Install dependencies:
 ```bash
+# Install dependencies
 npm install
-```
 
-2. Run the cloudflare workers dev server:
-```bash
+# Run the Cloudflare Workers backend
 npx wrangler dev
-```
 
-2. Run development server:
-```bash
+# In a separate terminal, run the frontend development server
 npm run dev
 ```
 
-3. Deploy to Cloudflare Workers:
-```bash
-npm run deploy
-```
+## Deployment
+The application is automatically deployed to Cloudflare Workers via GitHub Actions when changes are pushed to the main branch.
 
 ## Game Rules
 
