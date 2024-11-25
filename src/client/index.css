@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .backface-hidden {
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+}
+
+:root {
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --secondary: #4b5563;
+  --accent: #8b5cf6;
+  --background: #f3f4f6;
+  --card-bg: #ffffff;
+}
+
+body {
+  @apply bg-background text-gray-900 min-h-screen;
+}
+
+.card {
+  @apply relative w-24 h-36 rounded-lg shadow-md transition-transform duration-200 cursor-pointer hover:-translate-y-2;
+  perspective: 1000px;
+}
+
+.card.playable {
+  @apply hover:ring-2 ring-primary;
+}
+
+.card-inner {
+  @apply relative w-full h-full rounded-lg;
+  transform-style: preserve-3d;
+  transition: transform 0.6s;
+}
+
+.card.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-front, .card-back {
+  @apply absolute w-full h-full rounded-lg flex items-center justify-center backface-hidden;
+}
+
+.card-front {
+  @apply bg-card-bg border-2 border-gray-200;
+}
+
+/* Suit colors */
+.hearts{
+  @apply text-red-500;
+}
+
+.diamonds{
+  @apply text-blue-500;
+}
+
+.clubs{
+  @apply text-yellow-500;
+}
+
+.spades{
+  @apply text-green-500;
+}
+
+.card-back {
+  @apply bg-primary;
+  transform: rotateY(180deg);
+}
+
+.btn {
+  @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200;
+}
+
+.btn-primary {
+  @apply bg-primary text-white hover:bg-primary-dark;
+}
+
+.btn-secondary {
+  @apply bg-secondary text-white hover:bg-gray-600;
+}
+
+.input {
+  @apply px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary;
+}
