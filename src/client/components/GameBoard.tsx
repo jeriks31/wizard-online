@@ -109,7 +109,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             </div>
 
             {/* Current Trick */}
-            <div className="mb-4">
+            {gameState.phase !== 'waiting' && (<div className="mb-4">
                 <h3 className="text-lg font-bold mb-2">Current Trick</h3>
                 <div className="flex items-center gap-4">
                     {gameState.trumpCard && (
@@ -133,10 +133,10 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                         </div>
                     )}
                 </div>
-            </div>
+            </div>)}
 
             {/* Player Hand */}
-            <div className="mb-4">
+            {gameState.phase !== 'waiting' && (<div className="mb-4">
                 <h3 className="text-lg font-bold mb-2">Your Hand</h3>
                 <div className="flex flex-wrap gap-2">
                     {(gameState.players[playerId]?.hand ?? []).map((card, index) => (
@@ -148,7 +148,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                         />
                     ))}
                 </div>
-            </div>
+            </div>)}
 
             {/* Bidding UI */}
             {gameState.phase === 'bidding' && isPlayerTurn && (

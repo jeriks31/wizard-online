@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useGameState } from './hooks/useGameState';
 import { GameBoard } from './components/GameBoard';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 
-export default function App() {
+function ThemeToggle() {
+    const { theme, toggleTheme } = useTheme();
+    return (
+        <button
+            onClick={toggleTheme}
+            className="fixed top-4 right-4 px-4 py-2 rounded-lg bg-card-bg border border-border hover:bg-opacity-80 transition-colors"
+            aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+        >
+            {theme === 'light' ? '🌙' : '☀️'}
+        </button>
+    );
+}
+
+function AppContent() {
     const [playerName, setPlayerName] = useState('');
     const [gameId, setGameId] = useState('');
     const [hasJoined, setHasJoined] = useState(false);
@@ -61,7 +75,7 @@ export default function App() {
                     
                     {/* Name Input (shown always) */}
                     <div className="mb-6">
-                        <label htmlFor="playerName" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="playerName" className="block text-sm font-medium mb-2">
                             Your Name
                         </label>
                         <input
@@ -105,7 +119,7 @@ export default function App() {
                         /* Join Game Form */
                         <form onSubmit={handleJoin} className="space-y-4">
                             <div>
-                                <label htmlFor="gameId" className="block text-sm font-medium text-gray-700">
+                                <label htmlFor="gameId" className="block text-sm font-medium">
                                     Game ID
                                 </label>
                                 <input
@@ -180,7 +194,7 @@ export default function App() {
                     <div className="flex items-center justify-between">
                         <div>
                             <h2 className="text-xl font-bold">Game ID: {gameId}</h2>
-                            <p className="text-sm text-gray-600">Share this ID with your friends to invite them</p>
+                            <p className="text-sm">Share this ID with your friends to invite them</p>
                         </div>
                         <button
                             onClick={() => {
@@ -216,5 +230,14 @@ export default function App() {
                 />
             </div>
         </div>
+    );
+}
+
+export default function App() {
+    return (
+        <ThemeProvider>
+            <AppContent />
+            <ThemeToggle />
+        </ThemeProvider>
     );
 }

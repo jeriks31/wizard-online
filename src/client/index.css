@@ -9,17 +9,32 @@
   }
 }
 
-:root {
+:root[data-theme="light"] {
   --primary: #2563eb;
   --primary-dark: #1d4ed8;
   --secondary: #4b5563;
   --accent: #8b5cf6;
   --background: #f3f4f6;
   --card-bg: #ffffff;
+  --text: #1f2937;
+  --border: #e5e7eb;
+}
+
+:root[data-theme="dark"] {
+  --primary: #3b82f6;
+  --primary-dark: #2563eb;
+  --secondary: #9ca3af;
+  --accent: #a78bfa;
+  --background: #1f2937;
+  --card-bg: #374151;
+  --text: #f3f4f6;
+  --border: #4b5563;
 }
 
 body {
   @apply bg-background text-gray-900 min-h-screen;
+  background-color: var(--background);
+  color: var(--text);
 }
 
 .card {
