@@ -8,6 +8,12 @@ A real-time multiplayer implementation of the Wizard card game.
 - Cloudflare Workers for hosting
 - React frontend with Tailwind CSS
 
+### Coming Soon
+- Google login
+- Leaderboard
+- Game history
+- 
+
 ## Development
 ```bash
 # Install dependencies

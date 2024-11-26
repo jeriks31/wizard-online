@@ -85,7 +85,7 @@ export function useGameState(gameId: string): GameStateHook {
             // If not connected, retry after a short delay
             setTimeout(() => {
                 if (socket?.readyState === WebSocket.OPEN) {
-                    socket.send(JSON.stringify(message));
+                    sendMessage(message);
                 } else {
                     setError('Failed to connect to server. Please try again.');
                 }
