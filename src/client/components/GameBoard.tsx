@@ -84,12 +84,6 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                     <h2 className="text-xl font-bold">Round {gameState.currentRound}</h2>
                     <p>Phase: {gameState.phase}</p>
                 </div>
-                {gameState.trumpCard && (
-                    <div className="flex items-center">
-                        <span className="mr-2">Trump:</span>
-                        <Card card={gameState.trumpCard} />
-                    </div>
-                )}
             </div>
 
             {/* Players */}
@@ -115,16 +109,46 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             </div>
 
             {/* Current Trick */}
-            {gameState.currentTrick.length > 0 && (
-                <div className="mb-4">
-                    <h3 className="text-lg font-bold mb-2">Current Trick</h3>
-                    <div className="flex gap-2">
-                        {gameState.currentTrick.map((card, index) => (
-                            <Card key={index} card={card} />
-                        ))}
+            <div className="mb-4">
+                <h3 className="text-lg font-bold mb-2">Current Trick</h3>
+                <div className="flex items-center gap-4">
+                    {gameState.trumpCard && (
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm mb-1">Trump</span>
+                            <Card card={gameState.trumpCard} />
+                        </div>
+                    )}
+                    {/* Offset by header height (text-sm line-height 20px + mb-1 4px = 24px) */}
+                    <div className="flex items-center pt-[24px]">
+                        <div className="h-24 w-px bg-gray-300"></div>
                     </div>
+                    {gameState.currentTrick.length > 0 && (
+                        <div className="flex flex-col items-center">
+                            <span className="text-sm mb-1 invisible">Trick</span>
+                            <div className="flex gap-2">
+                                {gameState.currentTrick.map((card, index) => (
+                                    <Card key={index} card={card} />
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
+
+            {/* Player Hand */}
+            <div className="mb-4">
+                <h3 className="text-lg font-bold mb-2">Your Hand</h3>
+                <div className="flex flex-wrap gap-2">
+                    {(gameState.players[playerId]?.hand ?? []).map((card, index) => (
+                        <Card
+                            key={index}
+                            card={card}
+                            isPlayable={isCardPlayable(card, index)}
+                            onClick={() => isCardPlayable(card, index) && onPlayCard(index)}
+                        />
+                    ))}
+                </div>
+            </div>
 
             {/* Bidding UI */}
             {gameState.phase === 'bidding' && isPlayerTurn && (
@@ -152,21 +176,6 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                     </div>
                 </form>
             )}
-
-            {/* Player Hand */}
-            <div>
-                <h3 className="text-lg font-bold mb-2">Your Hand</h3>
-                <div className="flex flex-wrap gap-2">
-                    {(gameState.players[playerId]?.hand ?? []).map((card, index) => (
-                        <Card
-                            key={index}
-                            card={card}
-                            isPlayable={isCardPlayable(card, index)}
-                            onClick={() => isCardPlayable(card, index) && onPlayCard(index)}
-                        />
-                    ))}
-                </div>
-            </div>
         </div>
     );
 }
