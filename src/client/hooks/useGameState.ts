@@ -24,7 +24,7 @@ export function useGameState(gameId: string): GameStateHook {
 
     useEffect(() => {
         if (!gameId) return;
-        const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/websocket?gameId=${gameId}`);
+        const ws = new WebSocket(`/websocket?gameId=${gameId}`);
         
         ws.onopen = () => {
             setIsConnected(true);
