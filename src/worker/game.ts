@@ -305,6 +305,15 @@ export class Game {
         this.state.activePlayerId = playerIds[(currentIndex + 1) % playerIds.length]!;
     }
 
+    public removePlayer(id: string): boolean {
+        if (!(id in this.state.players)) {
+            return false;
+        }
+        
+        delete this.state.players[id];
+        return true;
+    }
+
     public getGameState(playerId: string): GameState {
         const player = this.state.players[playerId];
         if (!player) throw new Error('Player not found');

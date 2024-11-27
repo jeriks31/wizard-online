@@ -18,6 +18,7 @@
   --card-bg: #ffffff;
   --text: #1f2937;
   --border: #e5e7eb;
+  --input-text: #1f2937;
 }
 
 :root[data-theme="dark"] {
@@ -29,6 +30,7 @@
   --card-bg: #374151;
   --text: #f3f4f6;
   --border: #4b5563;
+  --input-text: #1f2937;
 }
 
 body {
@@ -99,5 +101,6 @@ body {
 }
 
 .input {
-  @apply px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary;
+  @apply px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary bg-white;
+  color: var(--input-text);
 }

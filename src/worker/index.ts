@@ -60,7 +60,19 @@ export class GameRoom {
 
         webSocket.addEventListener('close', () => {
             this.sessions = this.sessions.filter(s => s !== session);
-            // TODO: Handle player disconnection in game
+            
+            // Only remove player from game if the game hasn't started
+            if (!this.gameStarted && session.name) {
+                // Remove player from game state
+                this.game.removePlayer(session.id);
+                // Broadcast to remaining players that someone left
+                this.broadcast({
+                    type: 'player_left',
+                    id: session.id,
+                    name: session.name
+                });
+                this.broadcastGameState();
+            }
         });
 
         webSocket.addEventListener('error', () => {
@@ -163,18 +175,17 @@ export class GameRoom {
     }
 
     private broadcast(message: ServerMessage) {
-        const messageStr = JSON.stringify(message);
-        this.sessions.forEach(session => session.webSocket.send(messageStr));
+        this.sessions.forEach(session => this.sendMessage(session, message));
     }
 
     private broadcastGameState() {
         this.sessions.forEach(session => {
             try {
                 const state = this.game.getGameState(session.id);
-                session.webSocket.send(JSON.stringify({
+                this.sendMessage(session, {
                     type: 'game_state',
                     state
-                } as ServerMessage));
+                } as ServerMessage);
             } catch (err) {
                 // Handle case where player might not be in game yet
             }

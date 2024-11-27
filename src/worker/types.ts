@@ -7,10 +7,11 @@ export type ClientMessage =
     | { type: 'play_card'; cardIndex: number };
 
 export type ServerMessage =
-    | { type: 'game_state'; state: GameState & { playerHand: Card[] } }
+    | { type: 'game_state'; state: GameState }
     | { type: 'error'; message: string }
     | { type: 'join_success'; playerId: string }
     | { type: 'player_joined'; id: string; name: string }
+    | { type: 'player_left'; id: string; name: string }
     | { type: 'game_started' }
     | { type: 'bid_placed'; playerId: string; bid: number }
     | { type: 'card_played'; playerId: string; card: Card }
