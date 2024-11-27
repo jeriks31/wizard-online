@@ -31,7 +31,7 @@ export class Game {
     constructor() {
         this.state = {
             players: {},
-            deck: this.createDeck(),
+            deck: [],
             currentRound: 0,
             trumpCard: null,
             currentTrick: [],
@@ -79,7 +79,7 @@ export class Game {
     }
 
     public startGame(): boolean {
-        if (Object.keys(this.state.players).length < 3) return false;
+        if (Object.keys(this.state.players).length < 2) return false; //TODO: Change back to 3 after testing is done
         
         this.state.currentRound = 1;
         this.dealCards();
@@ -94,7 +94,8 @@ export class Game {
     }
 
     private dealCards(): void {
-        this.state.deck = this.shuffleDeck([...this.state.deck]);
+        this.state.deck = this.createDeck();
+        this.shuffleDeck();
         
         // Clear existing hands
         for (const player of Object.values(this.state.players)) {
@@ -121,12 +122,12 @@ export class Game {
         this.state.trumpCard = this.state.deck.pop() ?? null;
     }
 
-    private shuffleDeck(deck: Card[]): Card[] {
-        for (let i = deck.length - 1; i > 0; i--) {
+    private shuffleDeck(): void {
+        // Fisher-Yates shuffle
+        for (let i = this.state.deck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+            [this.state.deck[i], this.state.deck[j]] = [this.state.deck[j]!, this.state.deck[i]!];
         }
-        return deck;
     }
 
     public placeBid(playerId: string, bid: number): boolean {
@@ -151,14 +152,14 @@ export class Game {
         return true;
     }
 
-    public playCard(playerId: string, cardIndex: number): boolean {
+    public playCard(playerId: string, cardIndex: number): { success: boolean, trickComplete?: boolean } {
         const player = this.state.players[playerId];
         if (!player || 
             this.state.phase !== 'playing' || 
             playerId !== this.state.activePlayerId ||
             cardIndex < 0 || 
             cardIndex >= player.hand.length) {
-            return false;
+            return { success: false };
         }
 
         const card = player.hand[cardIndex]!;
@@ -168,7 +169,7 @@ export class Game {
             card.suit !== 'special' && 
             card.suit !== this.state.leadSuit && 
             player.hand.some(c => c.suit === this.state.leadSuit)) {
-            return false;
+            return { success: false };
         }
 
         // Remove card from hand and add to current trick
@@ -180,41 +181,40 @@ export class Game {
             this.state.leadSuit = card.suit;
         }
 
-        // If all players have played, evaluate the trick
+        // If all players have played, don't evaluate trick yet but signal it's complete
         if (this.state.currentTrick.length === Object.keys(this.state.players).length) {
-            this.evaluateTrick();
+            this.state.phase = 'scoring';
+            return { success: true, trickComplete: true };
         } else {
             this.moveToNextPlayer();
+            return { success: true, trickComplete: false };
         }
-
-        return true;
     }
 
-    private evaluateTrick(): void {
+    public evaluateTrick(): string {
         const winner = this.determineTrickWinner();
-        if (winner) {
-            const player = this.state.players[winner];
-            if (player) {
-                player.tricks++;
-            }
-            // Winner of the trick leads the next trick
-            this.state.leadingPlayerId = winner;
-            this.state.activePlayerId = winner;
-        }
 
+        const player = this.state.players[winner];
+        if (player) {
+            player.tricks++;
+        }
+        // Winner of the trick leads the next trick
+        this.state.leadingPlayerId = winner;
+        this.state.activePlayerId = winner;
         this.state.currentTrick = [];
         this.state.leadSuit = null;
+        this.state.phase = 'playing';
 
         // Check if round is complete
         if (Object.values(this.state.players).every(p => p.hand.length === 0)) {
             this.scoreRound();
             this.prepareNextRound();
         }
+
+        return winner;
     }
 
-    private determineTrickWinner(): string | null {
-        if (this.state.currentTrick.length === 0) return null;
-
+    private determineTrickWinner(): string {
         const playerIds = Object.keys(this.state.players);
         const startPlayerIndex = playerIds.indexOf(this.state.leadingPlayerId!);
         
@@ -227,7 +227,6 @@ export class Game {
                 playerId: playerIds[playerIndex]!
             };
         });
-        console.log(cardsWithPlayers);
 
         // Check for wizards first
         const wizardPlays = cardsWithPlayers.filter(play => play.card.value === 'wizard');
@@ -238,7 +237,7 @@ export class Game {
 
         // If all cards are jesters, the first player (leader) wins
         if (cardsWithPlayers.every(play => play.card.value === 'jester')) {
-            return this.state.leadingPlayerId;
+            return this.state.leadingPlayerId!;
         }
 
         let winningPlay = cardsWithPlayers[0]!;
@@ -318,9 +317,10 @@ export class Game {
         const player = this.state.players[playerId];
         if (!player) throw new Error('Player not found');
 
-        // Return a copy of the state but without the other players' hands
+        // Return a copy of the state but without the other players' hands and without the deck
         return {
             ...this.state,
+            deck: [],
             players: Object.fromEntries(
                 Object.entries(this.state.players).map(([id, player]) => [
                     id,

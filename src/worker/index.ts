@@ -148,14 +148,14 @@ export class GameRoom {
                     this.sendError(session, 'Game not started');
                     return;
                 }
-                if (this.game.playCard(session.id, message.cardIndex)) {
-                    const playerState = this.game.getGameState(session.id);
-                    this.broadcast({
-                        type: 'card_played',
-                        playerId: session.id,
-                        card: playerState.currentTrick![playerState.currentTrick!.length - 1]!
-                    });
+                const result = this.game.playCard(session.id, message.cardIndex);
+                if (result.success) {
                     this.broadcastGameState();
+
+                    if (result.trickComplete) {
+                        this.game.evaluateTrick();
+                        this.broadcastGameState();
+                    }
                 } else {
                     this.sendError(session, 'Invalid card play');
                 }

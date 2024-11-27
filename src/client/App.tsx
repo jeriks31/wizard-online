@@ -215,7 +215,7 @@ function AppContent() {
                         <button 
                             onClick={startGame}
                             className="btn btn-primary"
-                            disabled={Object.keys(gameState.players || {}).length < 3}
+                            disabled={Object.keys(gameState.players || {}).length < 2} //TODO: Change back to 3 after testing is done
                         >
                             Start Game
                         </button>

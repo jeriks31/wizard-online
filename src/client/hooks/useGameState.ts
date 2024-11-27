@@ -15,7 +15,7 @@ interface GameStateHook {
 }
 
 const WORKER_URL = process.env.NODE_ENV === 'development'
-    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
+    ? ''
     : 'wss://wizard-online.januxii00.workers.dev';
 
 export function useGameState(gameId: string): GameStateHook {

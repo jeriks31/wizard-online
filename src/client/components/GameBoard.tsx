@@ -14,11 +14,43 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
     const [bidAmount, setBidAmount] = useState(0);
     const [oldState, setOldState] = useState<GameState | null>(null);
     const [bidError, setBidError] = useState<string | null>(null);
+    const [lastTrickWinner, setLastTrickWinner] = useState<string | null>(null);
+    const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
+    const [lastTrickCards, setLastTrickCards] = useState<CardType[]>([]);
     const isPlayerTurn = gameState.activePlayerId === playerId;
 
     useEffect(() => {
-        if (gameState.phase === 'playing' && gameState.currentTrick.length === 0) {
-            // Trick complete, determine winner
+        if (oldState?.phase === 'scoring') {
+            // Keep the last trick's cards visible
+            setLastTrickCards(oldState.currentTrick);
+            // Find the player whose tricks count increased
+            const winner = Object.entries(gameState.players).find(([_, player]) => {
+                const oldPlayer = oldState.players[player.id];
+                return oldPlayer && player.tricks > oldPlayer.tricks;
+            });
+            
+            if (winner) {
+                setLastTrickWinner(winner[1].name);
+                setTimeout(() => {
+                    setLastTrickWinner(null);
+                    setLastTrickCards([]);
+                }, 3000);
+            }
+        }
+        if (oldState?.phase === 'scoring' &&
+            gameState.phase === 'bidding') {
+            // Round changed - calculate score differences
+            const changes: Record<string, number> = {};
+            Object.entries(gameState.players).forEach(([id, player]) => {
+                const oldScore = oldState.players[id]!.score;
+                changes[id] = player.score - oldScore;
+            });
+            setScoreChanges(changes);
+            
+            // Clear score changes after delay
+            setTimeout(() => {
+                setScoreChanges({});
+            }, 3000);
         }
 
         setOldState(gameState);
@@ -103,7 +135,13 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                         </p>
                         <p>Bid: {player.bid !== null ? player.bid : '-'}</p>
                         <p>Tricks: {player.tricks}</p>
-                        <p>Score: {player.score}</p>
+                        <p>Score: {player.score}
+                            {scoreChanges[player.id] !== undefined && (
+                                <span className={`ml-2 ${scoreChanges[player.id]! > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                    {scoreChanges[player.id]! > 0 ? '+' : ''}{scoreChanges[player.id]}
+                                </span>
+                            )}
+                        </p>
                     </div>
                 ))}
             </div>
@@ -122,11 +160,13 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                     <div className="flex items-center pt-[24px]">
                         <div className="h-24 w-px bg-gray-300"></div>
                     </div>
-                    {gameState.currentTrick.length > 0 && (
+                    {(gameState.currentTrick.length > 0 || lastTrickWinner) && (
                         <div className="flex flex-col items-center">
-                            <span className="text-sm mb-1 invisible">Trick</span>
+                            <span className="text-sm mb-1">
+                                {lastTrickWinner ? `${lastTrickWinner} won the trick!` : 'Current Trick'}
+                            </span>
                             <div className="flex gap-2">
-                                {gameState.currentTrick.map((card, index) => (
+                                {(lastTrickCards.length > 0 ? lastTrickCards : gameState.currentTrick).map((card, index) => (
                                     <Card key={index} card={card} />
                                 ))}
                             </div>
