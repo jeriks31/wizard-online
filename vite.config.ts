@@ -17,9 +17,11 @@ export default defineConfig({
     server: {
         proxy: {
             '/websocket': {
-                target: 'http://localhost:8787',
+                target: process.env.NODE_ENV === 'development' 
+                    ? 'http://localhost:8787'
+                    : 'https://wizard-online.januxii00.workers.dev',
                 ws: true,
-            },
-        },
-    },
+            }
+        }
+    }
 });

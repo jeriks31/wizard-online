@@ -8,3 +8,6 @@ bindings = [{name = "GAME", class_name = "GameRoom"}]
 [[migrations]]
 tag = "v1"
 new_classes = ["GameRoom"]
+
+[limits]
+cpu_ms = 100
