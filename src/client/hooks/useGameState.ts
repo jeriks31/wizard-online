@@ -14,6 +14,10 @@ interface GameStateHook {
     playCard: (cardIndex: number) => void;
 }
 
+const WORKER_URL = process.env.NODE_ENV === 'development'
+    ? `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
+    : 'wss://wizard-online.januxii00.workers.dev';
+
 export function useGameState(gameId: string): GameStateHook {
     const [socket, setSocket] = useState<WebSocket | null>(null);
     const [gameState, setGameState] = useState<GameState | null>(null);
@@ -24,7 +28,7 @@ export function useGameState(gameId: string): GameStateHook {
 
     useEffect(() => {
         if (!gameId) return;
-        const ws = new WebSocket(`/websocket?gameId=${gameId}`);
+        const ws = new WebSocket(`${WORKER_URL}/websocket?gameId=${gameId}`);
         
         ws.onopen = () => {
             setIsConnected(true);
