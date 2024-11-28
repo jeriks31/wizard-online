@@ -35,9 +35,9 @@ export function useGameState(gameId: string): GameStateHook {
             setError(null);
         };
 
-        ws.onclose = () => {
+        ws.onclose = (ev: CloseEvent) => {
             setIsConnected(false);
-            setError('Disconnected from server');
+            setError('Disconnected from server: ' + ev.reason);
         };
 
         ws.onerror = () => {

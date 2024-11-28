@@ -11,15 +11,38 @@ interface Session {
     webSocket: WebSocket;
 }
 
+const afkKickTimerMillis = 1 * 60 * 1000; // 5 minutes
 export class GameRoom {
     private game: Game;
     private sessions: Session[];
     private gameStarted: boolean;
+    private lastActivityTime: number;
+    private cleanupInterval: any;
 
     constructor() {
         this.game = new Game();
         this.sessions = [];
         this.gameStarted = false;
+        this.lastActivityTime = Date.now();
+        
+        // Check every minute if there's been no activity for 5 minutes
+        this.cleanupInterval = setInterval(() => {
+            const fiveMinutesAgo = Date.now() - afkKickTimerMillis;
+            if (this.lastActivityTime < fiveMinutesAgo) {
+                this.cleanup();
+            }
+        }, 1000);
+    }
+
+    private cleanup() {
+        // Close all websocket connections
+        for (const session of this.sessions) {
+            try {
+                session.webSocket.close(1000, "Game room cleaned up due to inactivity");
+            } catch (e) { }
+        }
+        this.sessions = [];
+        clearInterval(this.cleanupInterval);
     }
 
     async fetch(request: Request) {
@@ -81,6 +104,7 @@ export class GameRoom {
     }
 
     private async handleMessage(session: Session, message: ClientMessage) {
+        this.lastActivityTime = Date.now();
         switch (message.type) {
             case 'join':
                 if (this.gameStarted) {
@@ -114,7 +138,7 @@ export class GameRoom {
 
             case 'start_game':
                 if (this.gameStarted) {
-                    this.sendError(session, 'Game already started');
+                    this.sendError(session, 'Invalid game state, create a new lobby');
                     return;
                 }
                 if (this.game.startGame()) {
@@ -128,7 +152,7 @@ export class GameRoom {
 
             case 'place_bid':
                 if (!this.gameStarted) {
-                    this.sendError(session, 'Game not started');
+                    this.sendError(session, 'Invalid game state, create a new lobby');
                     return;
                 }
                 if (this.game.placeBid(session.id, message.bid)) {
@@ -145,7 +169,7 @@ export class GameRoom {
 
             case 'play_card':
                 if (!this.gameStarted) {
-                    this.sendError(session, 'Game not started');
+                    this.sendError(session, 'Invalid game state, create a new lobby');
                     return;
                 }
                 const result = this.game.playCard(session.id, message.cardIndex);
@@ -170,6 +194,7 @@ export class GameRoom {
     }
 
     private sendMessage(session: Session, message: ServerMessage) {
+        this.lastActivityTime = Date.now();
         session.webSocket.send(JSON.stringify(message));
     }
 
@@ -186,15 +211,11 @@ export class GameRoom {
 
     private broadcastGameState() {
         this.sessions.forEach(session => {
-            try {
-                const state = this.game.getGameState(session.id);
-                this.sendMessage(session, {
-                    type: 'game_state',
-                    state
-                } as ServerMessage);
-            } catch (err) {
-                // Handle case where player might not be in game yet
-            }
+            const state = this.game.getGameState(session.id);
+            this.sendMessage(session, {
+                type: 'game_state',
+                state
+            } as ServerMessage);
         });
     }
 }
