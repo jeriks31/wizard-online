@@ -40,12 +40,26 @@ body {
 }
 
 .card {
-  @apply relative w-24 h-36 rounded-lg shadow-md transition-transform duration-200 cursor-pointer hover:-translate-y-2;
+  @apply relative w-24 h-36 rounded-lg shadow-md transition-all duration-200;
   perspective: 1000px;
 }
 
-.card.playable {
-  @apply hover:ring-2 ring-primary;
+/* Only apply playability styles to cards in player's hand */
+.player-hand .card {
+  @apply cursor-default;
+}
+
+.player-hand .card.playable {
+  @apply hover:ring-2 ring-primary cursor-pointer hover:-translate-y-2;
+}
+
+.player-hand .card:not(.playable) {
+  @apply opacity-70 cursor-not-allowed;
+  filter: saturate(0.7);
+}
+
+.player-hand .card:not(.playable):hover {
+  transform: none;
 }
 
 .card-inner {

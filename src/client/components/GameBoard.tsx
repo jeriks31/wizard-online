@@ -20,9 +20,8 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
     const isPlayerTurn = gameState.activePlayerId === playerId;
 
     useEffect(() => {
+        console.log(gameState);
         if (oldState?.phase === 'scoring') {
-            // Keep the last trick's cards visible
-            setLastTrickCards(oldState.currentTrick);
             // Find the player whose tricks count increased
             const winner = Object.entries(gameState.players).find(([_, player]) => {
                 const oldPlayer = oldState.players[player.id];
@@ -30,6 +29,9 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             });
             
             if (winner) {
+                console.log("Trick ended");
+                // Keep the last trick's cards visible
+                setLastTrickCards(oldState.currentTrick);
                 setLastTrickWinner(winner[1].name);
                 setTimeout(() => {
                     setLastTrickWinner(null);
@@ -37,8 +39,8 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                 }, 3000);
             }
         }
-        if (oldState?.phase === 'scoring' &&
-            gameState.phase === 'bidding') {
+        if (oldState && oldState.currentRound < gameState.currentRound) {
+            console.log("Round ended");
             // Round changed - calculate score differences
             const changes: Record<string, number> = {};
             Object.entries(gameState.players).forEach(([id, player]) => {
@@ -50,7 +52,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             // Clear score changes after delay
             setTimeout(() => {
                 setScoreChanges({});
-            }, 3000);
+            }, 5000);
         }
 
         setOldState(gameState);
@@ -66,9 +68,6 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                 return '';
         }
     };
-
-    console.log(gameState);
-    console.log(playerId);
 
     const handleBidSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -178,7 +177,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             {/* Player Hand */}
             {gameState.phase !== 'waiting' && (<div className="mb-4">
                 <h3 className="text-lg font-bold mb-2">Your Hand</h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 player-hand">
                     {(gameState.players[playerId]?.hand ?? []).map((card, index) => (
                         <Card
                             key={index}

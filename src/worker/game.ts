@@ -191,8 +191,9 @@ export class Game {
         }
     }
 
-    public evaluateTrick(): string {
+    public evaluateTrick(): { winner: string, roundComplete: boolean } {
         const winner = this.determineTrickWinner();
+        let roundComplete = false;
 
         const player = this.state.players[winner];
         if (player) {
@@ -207,11 +208,10 @@ export class Game {
 
         // Check if round is complete
         if (Object.values(this.state.players).every(p => p.hand.length === 0)) {
-            this.scoreRound();
-            this.prepareNextRound();
+            roundComplete = true;
         }
 
-        return winner;
+        return { winner, roundComplete };
     }
 
     private determineTrickWinner(): string {
@@ -221,7 +221,6 @@ export class Game {
         // Get the cards in order of play, with their corresponding player IDs
         const cardsWithPlayers = this.state.currentTrick.map((card, index) => {
             const playerIndex = (startPlayerIndex + index) % playerIds.length;
-            console.log(startPlayerIndex, index, playerIndex);
             return {
                 card,
                 playerId: playerIds[playerIndex]!
@@ -270,7 +269,7 @@ export class Game {
         return winningPlay.playerId;
     }
 
-    private scoreRound(): void {
+    public endRound(): void {
         for (const player of Object.values(this.state.players)) {
             if (player.bid === player.tricks) {
                 player.score += 10 + (player.bid * 10);
@@ -278,6 +277,7 @@ export class Game {
                 player.score -= Math.abs(player.bid! - player.tricks) * 10;
             }
         }
+        this.prepareNextRound();
     }
 
     private prepareNextRound(): void {

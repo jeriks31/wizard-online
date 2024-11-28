@@ -153,8 +153,12 @@ export class GameRoom {
                     this.broadcastGameState();
 
                     if (result.trickComplete) {
-                        this.game.evaluateTrick();
+                        const { winner, roundComplete } = this.game.evaluateTrick();
                         this.broadcastGameState();
+                        if (roundComplete) {
+                            this.game.endRound();
+                            this.broadcastGameState();
+                        }
                     }
                 } else {
                     this.sendError(session, 'Invalid card play');
