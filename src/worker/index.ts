@@ -11,7 +11,6 @@ interface Session {
     webSocket: WebSocket;
 }
 
-const afkKickTimerMillis = 1 * 60 * 1000; // 5 minutes
 export class GameRoom {
     private game: Game;
     private sessions: Session[];
@@ -25,13 +24,13 @@ export class GameRoom {
         this.gameStarted = false;
         this.lastActivityTime = Date.now();
         
-        // Check every minute if there's been no activity for 5 minutes
+        // Inactivity check
         this.cleanupInterval = setInterval(() => {
-            const fiveMinutesAgo = Date.now() - afkKickTimerMillis;
+            const fiveMinutesAgo = Date.now() - 5* 60 * 1000;
             if (this.lastActivityTime < fiveMinutesAgo) {
                 this.cleanup();
             }
-        }, 1000);
+        }, 60 * 1000);
     }
 
     private cleanup() {
