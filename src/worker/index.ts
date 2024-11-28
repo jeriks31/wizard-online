@@ -153,9 +153,11 @@ export class GameRoom {
                     this.broadcastGameState();
 
                     if (result.trickComplete) {
+                        await new Promise(resolve => setTimeout(resolve, 100));
                         const { winner, roundComplete } = this.game.evaluateTrick();
                         this.broadcastGameState();
                         if (roundComplete) {
+                            await new Promise(resolve => setTimeout(resolve, 100));
                             this.game.endRound();
                             this.broadcastGameState();
                         }

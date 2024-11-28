@@ -176,8 +176,8 @@ export class Game {
         player.hand.splice(cardIndex, 1);
         this.state.currentTrick.push(card);
 
-        // Set lead suit if this is the first card
-        if (this.state.currentTrick.length === 1) {
+        // Set lead suit if this is the first non-special card
+        if (!this.state.leadSuit && card.suit !== 'special') {
             this.state.leadSuit = card.suit;
         }
 
