@@ -14,9 +14,11 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
     const [bidAmount, setBidAmount] = useState(0);
     const [oldState, setOldState] = useState<GameState | null>(null);
     const [bidError, setBidError] = useState<string | null>(null);
+
     const [lastTrickWinner, setLastTrickWinner] = useState<string | null>(null);
     const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
-    const [lastTrickCards, setLastTrickCards] = useState<CardType[]>([]);
+    const [temporaryTrickCards, setTemporaryTrickCards] = useState<CardType[]>([]);
+    const [temporaryTrumpCard, setTemporaryTrumpCard] = useState<CardType | null>(null);
     const isPlayerTurn = gameState.activePlayerId === playerId;
 
     useEffect(() => {
@@ -31,12 +33,12 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             if (winner) {
                 console.log("Trick ended");
                 // Keep the last trick's cards visible
-                setLastTrickCards(oldState.currentTrick);
+                setTemporaryTrickCards(oldState.currentTrick);
                 setLastTrickWinner(winner[1].name);
                 setTimeout(() => {
                     setLastTrickWinner(null);
-                    setLastTrickCards([]);
-                }, 3000);
+                    setTemporaryTrickCards([]);
+                }, 4000);
             }
         }
         if (oldState && oldState.currentRound < gameState.currentRound) {
@@ -48,11 +50,13 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                 changes[id] = player.score - oldScore;
             });
             setScoreChanges(changes);
+            setTemporaryTrumpCard(oldState.trumpCard);
             
-            // Clear score changes after delay
+            // Clear score changes and old round state after delay
             setTimeout(() => {
                 setScoreChanges({});
-            }, 5000);
+                setTemporaryTrumpCard(null);
+            }, 4000);
         }
 
         setOldState(gameState);
@@ -61,9 +65,9 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
     const getPhaseText = (phase: string) => {
         switch (phase) {
             case 'bidding':
-                return 'bidding';
+                return 'is bidding';
             case 'playing':
-                return 'playing';
+                return 'is playing';
             default:
                 return '';
         }
@@ -149,23 +153,23 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             {gameState.phase !== 'waiting' && (<div className="mb-4">
                 <h3 className="text-lg font-bold mb-2">Current Trick</h3>
                 <div className="flex items-center gap-4">
-                    {gameState.trumpCard && (
+                    {(temporaryTrumpCard ? temporaryTrumpCard : gameState.trumpCard) && (
                         <div className="flex flex-col items-center">
                             <span className="text-sm mb-1">Trump</span>
-                            <Card card={gameState.trumpCard} />
+                            <Card card={temporaryTrumpCard ?? gameState.trumpCard!} />
                         </div>
                     )}
                     {/* Offset by header height (text-sm line-height 20px + mb-1 4px = 24px) */}
                     <div className="flex items-center pt-[24px]">
                         <div className="h-24 w-px bg-gray-300"></div>
                     </div>
-                    {(gameState.currentTrick.length > 0 || lastTrickWinner) && (
+                    {(gameState.currentTrick.length > 0 || temporaryTrickCards.length > 0) && (
                         <div className="flex flex-col items-center">
                             <span className="text-sm mb-1">
                                 {lastTrickWinner ? `${lastTrickWinner} won the trick!` : 'Current Trick'}
                             </span>
                             <div className="flex gap-2">
-                                {(lastTrickCards.length > 0 ? lastTrickCards : gameState.currentTrick).map((card, index) => (
+                                {(temporaryTrickCards.length > 0 ? temporaryTrickCards : gameState.currentTrick).map((card, index) => (
                                     <Card key={index} card={card} />
                                 ))}
                             </div>
@@ -178,7 +182,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             {gameState.phase !== 'waiting' && (<div className="mb-4">
                 <h3 className="text-lg font-bold mb-2">Your Hand</h3>
                 <div className="flex flex-wrap gap-2 player-hand">
-                    {(gameState.players[playerId]?.hand ?? []).map((card, index) => (
+                    {!temporaryTrumpCard && (gameState.players[playerId]?.hand ?? []).map((card, index) => (
                         <Card
                             key={index}
                             card={card}
@@ -190,7 +194,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             </div>)}
 
             {/* Bidding UI */}
-            {gameState.phase === 'bidding' && isPlayerTurn && (
+            {gameState.phase === 'bidding' && !temporaryTrumpCard && isPlayerTurn && (
                 <form onSubmit={handleBidSubmit} className="mb-4">
                     <div className="flex flex-col gap-2">
                         <div className="flex gap-2">
