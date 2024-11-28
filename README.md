@@ -9,10 +9,10 @@ A real-time multiplayer implementation of the Wizard card game.
 - React frontend with Tailwind CSS
 
 ### Coming Soon
+- Handle wizard and jester as trump cards
 - Google login
 - Leaderboard
 - Game history
-- 
 
 ## Development
 ```bash
