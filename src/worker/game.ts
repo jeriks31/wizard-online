@@ -15,7 +15,6 @@ export interface Card {
 
 export interface GameState {
     players: Record<string, Player>;
-    deck: Card[];
     currentRound: number;
     trumpCard: Card | null;
     currentTrick: Card[];
@@ -31,7 +30,6 @@ export class Game {
     constructor() {
         this.state = {
             players: {},
-            deck: [],
             currentRound: 0,
             trumpCard: null,
             currentTrick: [],
@@ -40,26 +38,6 @@ export class Game {
             phase: 'waiting',
             leadSuit: null,
         };
-    }
-
-    private createDeck(): Card[] {
-        const deck: Card[] = [];
-        const suits: ('hearts' | 'diamonds' | 'clubs' | 'spades')[] = ['hearts', 'diamonds', 'clubs', 'spades'];
-        
-        // Add regular cards
-        for (const suit of suits) {
-            for (let value = 1; value <= 13; value++) {
-                deck.push({ suit, value });
-            }
-        }
-        
-        // Add Wizards and Jesters
-        for (let i = 0; i < 4; i++) {
-            deck.push({ suit: 'special', value: 'wizard' });
-            deck.push({ suit: 'special', value: 'jester' });
-        }
-        
-        return deck;
     }
 
     public addPlayer(id: string, name: string): boolean {
@@ -94,8 +72,7 @@ export class Game {
     }
 
     private dealCards(): void {
-        this.state.deck = this.createDeck();
-        this.shuffleDeck();
+        let deck = this.shuffleDeck(this.createDeck());
         
         // Clear existing hands
         for (const player of Object.values(this.state.players)) {
@@ -108,7 +85,7 @@ export class Game {
         const playerIds = Object.keys(this.state.players);
         for (let i = 0; i < this.state.currentRound; i++) {
             for (const playerId of playerIds) {
-                const card = this.state.deck.pop();
+                const card = deck.pop();
                 if (card) {
                     const player = this.state.players[playerId];
                     if (player) {
@@ -119,15 +96,36 @@ export class Game {
         }
 
         // Set trump card if there are cards remaining
-        this.state.trumpCard = this.state.deck.pop() ?? null;
+        this.state.trumpCard = deck.pop() ?? null;
     }
 
-    private shuffleDeck(): void {
-        // Fisher-Yates shuffle
-        for (let i = this.state.deck.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [this.state.deck[i], this.state.deck[j]] = [this.state.deck[j]!, this.state.deck[i]!];
+    private createDeck(): Card[] {
+        const deck: Card[] = [];
+        const suits: ('hearts' | 'diamonds' | 'clubs' | 'spades')[] = ['hearts', 'diamonds', 'clubs', 'spades'];
+        
+        // Add regular cards
+        for (const suit of suits) {
+            for (let value = 1; value <= 13; value++) {
+                deck.push({ suit, value });
+            }
         }
+        
+        // Add Wizards and Jesters
+        for (let i = 0; i < 4; i++) {
+            deck.push({ suit: 'special', value: 'wizard' });
+            deck.push({ suit: 'special', value: 'jester' });
+        }
+        
+        return deck;
+    }
+
+    private shuffleDeck(deck: Card[]): Card[] {
+        // Fisher-Yates shuffle
+        for (let i = deck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [deck[i], deck[j]] = [deck[j]!, deck[i]!];
+        }
+        return deck;
     }
 
     public placeBid(playerId: string, bid: number): boolean {
@@ -320,7 +318,6 @@ export class Game {
         // Return a copy of the state but without the other players' hands and without the deck
         return {
             ...this.state,
-            deck: [],
             players: Object.fromEntries(
                 Object.entries(this.state.players).map(([id, player]) => [
                     id,
