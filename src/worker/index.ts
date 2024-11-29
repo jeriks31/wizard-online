@@ -11,16 +11,14 @@ interface Session {
     webSocket: WebSocket;
 }
 
-export class GameRoom implements DurableObject {
+export class GameRoom {
     private game: Game;
     private sessions: Session[];
     private gameStarted: boolean;
     private lastActivityTime: number;
     private cleanupInterval: any;
-    private ctx: DurableObjectState;
 
-    constructor(state: DurableObjectState) {
-        this.ctx = state;
+    constructor() {
         this.game = new Game();
         this.sessions = [];
         this.gameStarted = false;
@@ -28,7 +26,7 @@ export class GameRoom implements DurableObject {
         
         // Inactivity check
         this.cleanupInterval = setInterval(() => {
-            const fiveMinutesAgo = Date.now() - 5* 60 * 1000;
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
             if (this.lastActivityTime < fiveMinutesAgo) {
                 this.cleanup();
             }
@@ -44,14 +42,7 @@ export class GameRoom implements DurableObject {
             }
 
             const [client, server] = Object.values(new WebSocketPair());
-
-            // Create session
-            const sessionId = crypto.randomUUID();
-            const session: Session = { id: sessionId, name: '', webSocket: server! };
-            this.sessions.push(session);
-
-            // Accept the WebSocket with hibernation support
-            this.ctx.acceptWebSocket(server!);
+            await this.handleSession(server!);
 
             return new Response(null, {
                 status: 101,
@@ -62,38 +53,44 @@ export class GameRoom implements DurableObject {
         return new Response('Not found', { status: 404 });
     }
 
-    async webSocketMessage(ws: WebSocket, data: string) {
-        try {
-            const session = this.sessions.find(s => s.webSocket === ws);
-            if (!session) return;
+    async handleSession(webSocket: WebSocket) {
+        webSocket.accept();
 
-            const message = JSON.parse(data) as ClientMessage;
-            await this.handleMessage(session, message);
-        } catch (err: any) {
-            this.sendError(this.sessions.find(s => s.webSocket === ws)!, err.message);
-        }
-    }
+        // Generate a unique ID for the session
+        const sessionId = crypto.randomUUID();
+        const session: Session = { id: sessionId, name: '', webSocket };
 
-    async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
-        const session = this.sessions.find(s => s.webSocket === ws);
-        if (!session) return;
+        this.sessions.push(session);
 
-        this.sessions = this.sessions.filter(s => s !== session);
-        
-        // Only remove player from game if the game hasn't started
-        if (!this.gameStarted && session.name) {
-            this.game.removePlayer(session.id);
-            this.broadcast({
-                type: 'player_left',
-                id: session.id,
-                name: session.name
-            });
-            this.broadcastGameState();
-        }
-    }
+        webSocket.addEventListener('message', async (msg) => {
+            try {
+                const data = JSON.parse(msg.data as string) as ClientMessage;
+                await this.handleMessage(session, data);
+            } catch (err: any) {
+                this.sendError(session, err.message);
+            }
+        });
 
-    async webSocketError(ws: WebSocket) {
-        this.sessions = this.sessions.filter(s => s.webSocket !== ws);
+        webSocket.addEventListener('close', () => {
+            this.sessions = this.sessions.filter(s => s !== session);
+            
+            // Only remove player from game if the game hasn't started
+            if (!this.gameStarted && session.name) {
+                // Remove player from game state
+                this.game.removePlayer(session.id);
+                // Broadcast to remaining players that someone left
+                this.broadcast({
+                    type: 'player_left',
+                    id: session.id,
+                    name: session.name
+                });
+                this.broadcastGameState();
+            }
+        });
+
+        webSocket.addEventListener('error', () => {
+            this.sessions = this.sessions.filter(s => s !== session);
+        });
     }
 
     private cleanup() {
