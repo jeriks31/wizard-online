@@ -11,14 +11,16 @@ interface Session {
     webSocket: WebSocket;
 }
 
-export class GameRoom {
+export class GameRoom implements DurableObject {
     private game: Game;
     private sessions: Session[];
     private gameStarted: boolean;
     private lastActivityTime: number;
     private cleanupInterval: any;
+    private ctx: DurableObjectState;
 
-    constructor() {
+    constructor(state: DurableObjectState) {
+        this.ctx = state;
         this.game = new Game();
         this.sessions = [];
         this.gameStarted = false;
@@ -33,17 +35,6 @@ export class GameRoom {
         }, 60 * 1000);
     }
 
-    private cleanup() {
-        // Close all websocket connections
-        for (const session of this.sessions) {
-            try {
-                session.webSocket.close(1000, "Game room cleaned up due to inactivity");
-            } catch (e) { }
-        }
-        this.sessions = [];
-        clearInterval(this.cleanupInterval);
-    }
-
     async fetch(request: Request) {
         const url = new URL(request.url);
 
@@ -53,7 +44,14 @@ export class GameRoom {
             }
 
             const [client, server] = Object.values(new WebSocketPair());
-            await this.handleSession(server!);
+
+            // Create session
+            const sessionId = crypto.randomUUID();
+            const session: Session = { id: sessionId, name: '', webSocket: server! };
+            this.sessions.push(session);
+
+            // Accept the WebSocket with hibernation support
+            this.ctx.acceptWebSocket(server!);
 
             return new Response(null, {
                 status: 101,
@@ -64,42 +62,49 @@ export class GameRoom {
         return new Response('Not found', { status: 404 });
     }
 
-    async handleSession(webSocket: WebSocket) {
-        webSocket.accept();
+    async webSocketMessage(ws: WebSocket, data: string) {
+        try {
+            const session = this.sessions.find(s => s.webSocket === ws);
+            if (!session) return;
 
-        // Generate a unique ID for the session
-        const sessionId = crypto.randomUUID();
-        const session: Session = { id: sessionId, name: '', webSocket };
+            const message = JSON.parse(data) as ClientMessage;
+            await this.handleMessage(session, message);
+        } catch (err: any) {
+            this.sendError(this.sessions.find(s => s.webSocket === ws)!, err.message);
+        }
+    }
+
+    async webSocketClose(ws: WebSocket, code: number, reason: string, wasClean: boolean) {
+        const session = this.sessions.find(s => s.webSocket === ws);
+        if (!session) return;
+
+        this.sessions = this.sessions.filter(s => s !== session);
         
-        webSocket.addEventListener('message', async (msg) => {
+        // Only remove player from game if the game hasn't started
+        if (!this.gameStarted && session.name) {
+            this.game.removePlayer(session.id);
+            this.broadcast({
+                type: 'player_left',
+                id: session.id,
+                name: session.name
+            });
+            this.broadcastGameState();
+        }
+    }
+
+    async webSocketError(ws: WebSocket) {
+        this.sessions = this.sessions.filter(s => s.webSocket !== ws);
+    }
+
+    private cleanup() {
+        // Close all websocket connections
+        for (const session of this.sessions) {
             try {
-                const data = JSON.parse(msg.data as string) as ClientMessage;
-                await this.handleMessage(session, data);
-            } catch (err: any) {
-                this.sendError(session, err.message);
-            }
-        });
-
-        webSocket.addEventListener('close', () => {
-            this.sessions = this.sessions.filter(s => s !== session);
-            
-            // Only remove player from game if the game hasn't started
-            if (!this.gameStarted && session.name) {
-                // Remove player from game state
-                this.game.removePlayer(session.id);
-                // Broadcast to remaining players that someone left
-                this.broadcast({
-                    type: 'player_left',
-                    id: session.id,
-                    name: session.name
-                });
-                this.broadcastGameState();
-            }
-        });
-
-        webSocket.addEventListener('error', () => {
-            this.sessions = this.sessions.filter(s => s !== session);
-        });
+                session.webSocket.close(1000, "Game room cleaned up due to inactivity");
+            } catch (e) { }
+        }
+        this.sessions = [];
+        clearInterval(this.cleanupInterval);
     }
 
     private async handleMessage(session: Session, message: ClientMessage) {
@@ -112,7 +117,6 @@ export class GameRoom {
                 }
                 session.name = message.name;
                 if (this.game.addPlayer(session.id, message.name)) {
-                    this.sessions.push(session);
                     // Send success message to the joining player
                     this.sendMessage(session, {
                         type: 'join_success',
