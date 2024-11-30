@@ -11,12 +11,52 @@ interface Session {
     webSocket: WebSocket;
 }
 
-export class GameRoom {
+export class GameManager {
+    private rooms: Map<string, GameRoom>;
+
+    constructor() {
+        this.rooms = new Map();
+    }
+
+    async fetch(request: Request) {
+        const url = new URL(request.url);
+        const gameId = url.searchParams.get('gameId');
+
+        if (!gameId) {
+            return new Response('Game ID required', { status: 400 });
+        }
+
+        // Get or create game room
+        let gameRoom = this.rooms.get(gameId);
+        if (!gameRoom) {
+            gameRoom = new GameRoom();
+            this.rooms.set(gameId, gameRoom);
+        }
+
+        if (url.pathname === '/websocket') {
+            if (request.headers.get('Upgrade') !== 'websocket') {
+                return new Response('Expected websocket', { status: 400 });
+            }
+
+            const [client, server] = Object.values(new WebSocketPair());
+            await gameRoom.handleSession(server!);
+
+            return new Response(null, {
+                status: 101,
+                webSocket: client,
+            });
+        }
+
+        return new Response('Not found', { status: 404 });
+    }
+}
+
+class GameRoom {
     private game: Game;
     private sessions: Session[];
     private gameStarted: boolean;
     private lastActivityTime: number;
-    private cleanupInterval: any;
+    private cleanupInterval: ReturnType<typeof setInterval>;
 
     constructor() {
         this.game = new Game(() => this.broadcastGameState());
@@ -31,26 +71,6 @@ export class GameRoom {
                 this.cleanup();
             }
         }, 60 * 1000);
-    }
-
-    async fetch(request: Request) {
-        const url = new URL(request.url);
-
-        if (url.pathname === '/websocket') {
-            if (request.headers.get('Upgrade') !== 'websocket') {
-                return new Response('Expected websocket', { status: 400 });
-            }
-
-            const [client, server] = Object.values(new WebSocketPair());
-            await this.handleSession(server!);
-
-            return new Response(null, {
-                status: 101,
-                webSocket: client,
-            });
-        }
-
-        return new Response('Not found', { status: 404 });
     }
 
     async handleSession(webSocket: WebSocket) {
@@ -207,15 +227,8 @@ export class GameRoom {
 }
 
 export default {
-    async fetch(request: Request, env: Env) {
-        const url = new URL(request.url);
-        const gameId = url.searchParams.get('gameId');
-
-        if (!gameId) {
-            return new Response('Game ID required', { status: 400 });
-        }
-
-        const gameRoom = env.GAME.get(env.GAME.idFromName(gameId));
-        return gameRoom.fetch(request);
+    fetch: async (request: Request, env: Env) => {
+        const gameManager = env.GAME.get(env.GAME.idFromName('singleton'));
+        return gameManager.fetch(request);
     }
 } as ExportedHandler;

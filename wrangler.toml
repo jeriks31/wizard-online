@@ -3,11 +3,11 @@ main = "src/worker/index.ts"
 compatibility_date = "2024-01-01"
 
 [durable_objects]
-bindings = [{name = "GAME", class_name = "GameRoom"}]
+bindings = [{name = "GAME", class_name = "GameManager"}]
 
 [[migrations]]
 tag = "v1"
-new_classes = ["GameRoom"]
+new_classes = ["GameManager"]
 
 [limits]
 cpu_ms = 100
