@@ -39,6 +39,7 @@ function AppContent() {
         playerId,
         joinGame,
         startGame,
+        addBotPlayer,
         placeBid,
         playCard
     } = useGameState(gameId);
@@ -218,6 +219,13 @@ function AppContent() {
                             disabled={Object.keys(gameState.players || {}).length < 2} //TODO: Change back to 3 after testing is done
                         >
                             Start Game
+                        </button>
+                        <button 
+                            onClick={addBotPlayer}
+                            className="btn btn-secondary"
+                            disabled={Object.keys(gameState.players || {}).length >= 6}
+                        >
+                            Add Bot
                         </button>
                     </div>
                 )}

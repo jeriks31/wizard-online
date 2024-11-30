@@ -1,6 +1,7 @@
 export interface Player {
     id: string;
     name: string;
+    isHuman: boolean;
     connected: boolean;
     hand: Card[];
     tricks: number;
@@ -40,12 +41,13 @@ export class Game {
         };
     }
 
-    public addPlayer(id: string, name: string): boolean {
+    public addPlayer(id: string, name: string, isHuman: boolean): boolean {
         if (Object.keys(this.state.players).length >= 6) return false;
         
         this.state.players[id] = {
             id,
             name,
+            isHuman: isHuman,
             connected: true,
             hand: [],
             tricks: 0,
@@ -54,6 +56,14 @@ export class Game {
         };
         
         return true;
+    }
+
+    public addBotPlayer(): { id: string, name: string, success: boolean } {
+        const botsInGame = Object.values(this.state.players).filter(p => !p.isHuman).length;
+        const botId = `bot-${botsInGame + 1}`;
+        const botName = `Bot ${botsInGame + 1}`;
+        
+        return { id: botId, name: botName, success: this.addPlayer(botId, botName, false)};
     }
 
     public startGame(): boolean {
@@ -163,10 +173,7 @@ export class Game {
         const card = player.hand[cardIndex]!;
         
         // Check if player must follow suit
-        if (this.state.leadSuit && 
-            card.suit !== 'special' && 
-            card.suit !== this.state.leadSuit && 
-            player.hand.some(c => c.suit === this.state.leadSuit)) {
+        if (!this.isPlayableCard(card, player.hand)) {
             return { success: false };
         }
 
@@ -186,6 +193,31 @@ export class Game {
         } else {
             this.moveToNextPlayer();
             return { success: true, trickComplete: false };
+        }
+    }
+
+    public handleBotTurn(): void {
+        const activePlayer = this.state.activePlayerId ? this.state.players[this.state.activePlayerId] : null;
+        if (!activePlayer || activePlayer.isHuman) return;
+
+        if (this.state.phase === 'bidding') {
+            // Bot bidding logic: bid Math.floor(currentRound/playerCount)
+            const bid = Math.floor(this.state.currentRound / Object.keys(this.state.players).length);
+            this.placeBid(activePlayer.id, bid);
+        } else if (this.state.phase === 'playing') {
+            // Bot playing logic: play a random valid card
+            const validCards = activePlayer.hand.filter((_, index) => {
+                const card = activePlayer.hand[index]!;
+                return this.isPlayableCard(card, activePlayer.hand);
+            });
+            
+            if (validCards.length > 0) {
+                const randomCardIndex = Math.floor(Math.random() * validCards.length);
+                const selectedCard = validCards[randomCardIndex]!;
+                // Find the index of this card in the original hand
+                const cardIndex = activePlayer.hand.findIndex(c => c.suit === selectedCard.suit && c.value === selectedCard.value);
+                this.playCard(activePlayer.id, cardIndex);
+            }
         }
     }
 
@@ -210,6 +242,15 @@ export class Game {
         }
 
         return { winner, roundComplete };
+    }
+
+    private isPlayableCard(card: Card, playerHand: Card[]): boolean {
+        if (this.state.leadSuit && card.suit !== 'special') {
+            const hasLeadSuit = playerHand.some(c => c.suit === this.state.leadSuit);
+            if (hasLeadSuit && card.suit !== this.state.leadSuit) return false; // Must follow suit if possible
+        }
+
+        return true;
     }
 
     private determineTrickWinner(): string {

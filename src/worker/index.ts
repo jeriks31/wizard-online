@@ -113,7 +113,7 @@ export class GameRoom {
                     return;
                 }
                 session.name = message.name;
-                if (this.game.addPlayer(session.id, message.name)) {
+                if (this.game.addPlayer(session.id, message.name, true)) {
                     // Send success message to the joining player
                     this.sendMessage(session, {
                         type: 'join_success',
@@ -188,6 +188,24 @@ export class GameRoom {
                     }
                 } else {
                     this.sendError(session, 'Invalid card play');
+                }
+                break;
+            case 'add_bot':
+                if (this.gameStarted) {
+                    this.sendError(session, 'Game already in progress');
+                    return;
+                }
+                const { id, name, success } = this.game.addBotPlayer();
+                if (success) {
+                    // Broadcast to all players that someone joined
+                    this.broadcast({ 
+                        type: 'player_joined',
+                        id: id,
+                        name: name
+                    });
+                    this.broadcastGameState();
+                } else {
+                    this.sendError(session, "Failed to add bot player");
                 }
                 break;
         }
