@@ -11,7 +11,6 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameBoardProps) {
-    const [bidAmount, setBidAmount] = useState(0);
     const [oldState, setOldState] = useState<GameState | null>(null);
     const [bidError, setBidError] = useState<string | null>(null);
 
@@ -71,28 +70,6 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             default:
                 return '';
         }
-    };
-
-    const handleBidSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        // Calculate total bids excluding current player
-        const totalBids = Object.values(gameState.players).reduce((sum, player) => 
-            player.id !== playerId && player.bid !== null ? sum + player.bid : sum, 0);
-
-        // Check if this is the last player to bid
-        const isLastBidder = Object.values(gameState.players)
-            .filter(p => p.id !== playerId)
-            .every(p => p.bid !== null);
-
-        // If last bidder, check if bid would make a perfect round
-        if (isLastBidder && totalBids + bidAmount === gameState.currentRound) {
-            setBidError("You cannot place a bid that would make the total bids equal to the round number");
-            return;
-        }
-
-        setBidError(null);
-        onPlaceBid(bidAmount);
     };
 
     const isCardPlayable = (card: CardType, index: number) => {
@@ -205,7 +182,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                                 const isLastBidder = Object.values(gameState.players)
                                     .filter(p => p.id !== playerId)
                                     .every(p => p.bid !== null);
-                                
+
                                 return Array.from({ length: numCards + 1 }, (_, i) => i)
                                     // Exclude bids that would make the total bids equal to the round number
                                     .filter(bid => !isLastBidder || (currentBids + bid !== numCards))
@@ -213,7 +190,6 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                                         <button
                                             key={bid}
                                             onClick={() => {
-                                                setBidAmount(bid);
                                                 setBidError(null);
                                                 onPlaceBid(bid);
                                             }}
