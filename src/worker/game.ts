@@ -100,6 +100,13 @@ export class Game {
                     const player = this.state.players[playerId];
                     if (player) {
                         player.hand.push(card);
+                        player.hand.sort((a, b) => {
+                            if (a.suit < b.suit) return -1;
+                            if (a.suit > b.suit) return 1;
+                            if (a.value < b.value) return -1;
+                            if (a.value > b.value) return 1;  
+                            return 0;
+                            });
                     }
                 }
             }
