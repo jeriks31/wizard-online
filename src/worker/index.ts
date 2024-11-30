@@ -19,7 +19,7 @@ export class GameRoom {
     private cleanupInterval: any;
 
     constructor() {
-        this.game = new Game();
+        this.game = new Game(() => this.broadcastGameState());
         this.sessions = [];
         this.gameStarted = false;
         this.lastActivityTime = Date.now();
@@ -78,13 +78,6 @@ export class GameRoom {
             if (!this.gameStarted && session.name) {
                 // Remove player from game state
                 this.game.removePlayer(session.id);
-                // Broadcast to remaining players that someone left
-                this.broadcast({
-                    type: 'player_left',
-                    id: session.id,
-                    name: session.name
-                });
-                this.broadcastGameState();
             }
         });
 
@@ -125,7 +118,6 @@ export class GameRoom {
                         id: session.id,
                         name: message.name
                     });
-                    this.broadcastGameState();
                 } else {
                     const gameState = this.game.getGameState(session.id);
                     const playerCount = Object.keys(gameState.players!).length;
@@ -143,8 +135,6 @@ export class GameRoom {
                 }
                 if (this.game.startGame()) {
                     this.gameStarted = true;
-                    this.broadcast({ type: 'game_started' });
-                    this.broadcastGameState();
                 } else {
                     this.sendError(session, 'Not enough players to start');
                 }
@@ -155,14 +145,7 @@ export class GameRoom {
                     this.sendError(session, 'Invalid game state, create a new lobby');
                     return;
                 }
-                if (this.game.placeBid(session.id, message.bid)) {
-                    this.broadcast({
-                        type: 'bid_placed',
-                        playerId: session.id,
-                        bid: message.bid
-                    });
-                    this.broadcastGameState();
-                } else {
+                if (!(await this.game.placeBid(session.id, message.bid))) {
                     this.sendError(session, 'Invalid bid');
                 }
                 break;
@@ -172,21 +155,7 @@ export class GameRoom {
                     this.sendError(session, 'Invalid game state, create a new lobby');
                     return;
                 }
-                const result = this.game.playCard(session.id, message.cardIndex);
-                if (result.success) {
-                    this.broadcastGameState();
-
-                    if (result.trickComplete) {
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        const { winner, roundComplete } = this.game.evaluateTrick();
-                        this.broadcastGameState();
-                        if (roundComplete) {
-                            await new Promise(resolve => setTimeout(resolve, 100));
-                            this.game.endRound();
-                            this.broadcastGameState();
-                        }
-                    }
-                } else {
+                if (!(await this.game.playCard(session.id, message.cardIndex))) {
                     this.sendError(session, 'Invalid card play');
                 }
                 break;
@@ -198,12 +167,11 @@ export class GameRoom {
                 const { id, name, success } = this.game.addBotPlayer();
                 if (success) {
                     // Broadcast to all players that someone joined
-                    this.broadcast({ 
+                    this.broadcast({
                         type: 'player_joined',
                         id: id,
                         name: name
                     });
-                    this.broadcastGameState();
                 } else {
                     this.sendError(session, "Failed to add bot player");
                 }
