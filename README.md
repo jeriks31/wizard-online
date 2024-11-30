@@ -1,6 +1,9 @@
 # Wizard Online
 
-A real-time multiplayer implementation of the Wizard card game.
+A real-time multiplayer implementation of the Wizard card game, hosted on Cloudflare Workers.
+
+## Demo
+You can try the game at [wizard-online.pages.dev](https://wizard-online.pages.dev/)
 
 ## Features
 - Real-time multiplayer gameplay
@@ -15,6 +18,11 @@ A real-time multiplayer implementation of the Wizard card game.
 - Game history
 
 ## Development
+
+### Prerequisites
+- [Node.js](https://nodejs.org/en) (v18 or higher recommended)
+
+### Setup
 ```bash
 # Install dependencies
 npm install
