@@ -11,7 +11,6 @@ interface GameBoardProps {
 }
 
 export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameBoardProps) {
-    const [bidAmount, setBidAmount] = useState(0);
     const [oldState, setOldState] = useState<GameState | null>(null);
     const [bidError, setBidError] = useState<string | null>(null);
 
@@ -73,28 +72,6 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
         }
     };
 
-    const handleBidSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-
-        // Calculate total bids excluding current player
-        const totalBids = Object.values(gameState.players).reduce((sum, player) => 
-            player.id !== playerId && player.bid !== null ? sum + player.bid : sum, 0);
-
-        // Check if this is the last player to bid
-        const isLastBidder = Object.values(gameState.players)
-            .filter(p => p.id !== playerId)
-            .every(p => p.bid !== null);
-
-        // If last bidder, check if bid would make a perfect round
-        if (isLastBidder && totalBids + bidAmount === gameState.currentRound) {
-            setBidError("You cannot place a bid that would make the total bids equal to the round number");
-            return;
-        }
-
-        setBidError(null);
-        onPlaceBid(bidAmount);
-    };
-
     const isCardPlayable = (card: CardType, index: number) => {
         if (!isPlayerTurn || gameState.phase !== 'playing') return false;
         
@@ -117,7 +94,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             <div className="mb-4 flex justify-between items-center">
                 <div>
                     <h2 className="text-xl font-bold">Round {gameState.currentRound}</h2>
-                    <p>Phase: {gameState.phase}</p>
+                    <p>Total bids: {Object.values(gameState.players).reduce((total, player) => total + (player.bid || 0), 0)}</p>
                 </div>
             </div>
 
@@ -195,29 +172,39 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
 
             {/* Bidding UI */}
             {gameState.phase === 'bidding' && !temporaryTrumpCard && isPlayerTurn && (
-                <form onSubmit={handleBidSubmit} className="mb-4">
+                <div className="mb-4">
                     <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                            <input
-                                type="number"
-                                min={0}
-                                max={gameState.currentRound}
-                                value={bidAmount}
-                                onChange={(e) => {
-                                    setBidAmount(parseInt(e.target.value));
-                                    setBidError(null);
-                                }}
-                                className="input"
-                            />
-                            <button type="submit" className="btn btn-primary">
-                                Place Bid
-                            </button>
+                        <div className="flex flex-wrap gap-2">
+                            {(() => {
+                                const numCards = gameState.currentRound;
+                                const currentBids = Object.values(gameState.players).reduce((sum, player) => 
+                                    player.id !== playerId && player.bid !== null ? sum + player.bid : sum, 0);
+                                const isLastBidder = Object.values(gameState.players)
+                                    .filter(p => p.id !== playerId)
+                                    .every(p => p.bid !== null);
+
+                                return Array.from({ length: numCards + 1 }, (_, i) => i)
+                                    // Exclude bids that would make the total bids equal to the round number
+                                    .filter(bid => !isLastBidder || (currentBids + bid !== numCards))
+                                    .map(bid => (
+                                        <button
+                                            key={bid}
+                                            onClick={() => {
+                                                setBidError(null);
+                                                onPlaceBid(bid);
+                                            }}
+                                            className="btn btn-primary px-4"
+                                        >
+                                            {bid}
+                                        </button>
+                                    ));
+                            })()}
                         </div>
                         {bidError && (
                             <p className="text-red-500 text-sm">{bidError}</p>
                         )}
                     </div>
-                </form>
+                </div>
             )}
         </div>
     );
