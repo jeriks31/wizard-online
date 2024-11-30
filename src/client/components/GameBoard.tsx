@@ -94,7 +94,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             <div className="mb-4 flex justify-between items-center">
                 <div>
                     <h2 className="text-xl font-bold">Round {gameState.currentRound}</h2>
-                    <p>Phase: {gameState.phase}</p>
+                    <p>Total bids: {Object.values(gameState.players).reduce((total, player) => total + (player.bid || 0), 0)}</p>
                 </div>
             </div>
 
