@@ -195,29 +195,40 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
 
             {/* Bidding UI */}
             {gameState.phase === 'bidding' && !temporaryTrumpCard && isPlayerTurn && (
-                <form onSubmit={handleBidSubmit} className="mb-4">
+                <div className="mb-4">
                     <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                            <input
-                                type="number"
-                                min={0}
-                                max={gameState.currentRound}
-                                value={bidAmount}
-                                onChange={(e) => {
-                                    setBidAmount(parseInt(e.target.value));
-                                    setBidError(null);
-                                }}
-                                className="input"
-                            />
-                            <button type="submit" className="btn btn-primary">
-                                Place Bid
-                            </button>
+                        <div className="flex flex-wrap gap-2">
+                            {(() => {
+                                const numCards = gameState.currentRound;
+                                const currentBids = Object.values(gameState.players).reduce((sum, player) => 
+                                    player.id !== playerId && player.bid !== null ? sum + player.bid : sum, 0);
+                                const isLastBidder = Object.values(gameState.players)
+                                    .filter(p => p.id !== playerId)
+                                    .every(p => p.bid !== null);
+                                
+                                return Array.from({ length: numCards + 1 }, (_, i) => i)
+                                    // Exclude bids that would make the total bids equal to the round number
+                                    .filter(bid => !isLastBidder || (currentBids + bid !== numCards))
+                                    .map(bid => (
+                                        <button
+                                            key={bid}
+                                            onClick={() => {
+                                                setBidAmount(bid);
+                                                setBidError(null);
+                                                onPlaceBid(bid);
+                                            }}
+                                            className="btn btn-primary px-4"
+                                        >
+                                            {bid}
+                                        </button>
+                                    ));
+                            })()}
                         </div>
                         {bidError && (
                             <p className="text-red-500 text-sm">{bidError}</p>
                         )}
                     </div>
-                </form>
+                </div>
             )}
         </div>
     );
