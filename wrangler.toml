@@ -7,7 +7,12 @@ bindings = [{name = "GAME", class_name = "GameManager"}]
 
 [[migrations]]
 tag = "v1"
+new_classes = ["GameRoom"]
+
+[[migrations]]
+tag = "v2"
 new_classes = ["GameManager"]
+deleted_classes = ["GameRoom"]
 
 [limits]
 cpu_ms = 100
