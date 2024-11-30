@@ -4,7 +4,8 @@ export type ClientMessage =
     | { type: 'join'; name: string }
     | { type: 'start_game' }
     | { type: 'place_bid'; bid: number }
-    | { type: 'play_card'; cardIndex: number };
+    | { type: 'play_card'; cardIndex: number }
+    | { type: 'add_bot'};
 
 export type ServerMessage =
     | { type: 'game_state'; state: GameState }

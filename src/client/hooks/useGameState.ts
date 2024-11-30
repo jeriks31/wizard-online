@@ -10,6 +10,7 @@ interface GameStateHook {
     lastTrickWinner: string | null;
     joinGame: (name: string) => void;
     startGame: () => void;
+    addBotPlayer: () => void;
     placeBid: (bid: number) => void;
     playCard: (cardIndex: number) => void;
 }
@@ -106,6 +107,10 @@ export function useGameState(gameId: string): GameStateHook {
         sendMessage({ type: 'start_game' });
     }, [sendMessage]);
 
+    const addBotPlayer = useCallback(() => {
+        sendMessage({ type: 'add_bot' });
+    }, [sendMessage]);
+
     const placeBid = useCallback((bid: number) => {
         sendMessage({ type: 'place_bid', bid });
     }, [sendMessage]);
@@ -122,6 +127,7 @@ export function useGameState(gameId: string): GameStateHook {
         lastTrickWinner,
         joinGame,
         startGame,
+        addBotPlayer,
         placeBid,
         playCard
     };

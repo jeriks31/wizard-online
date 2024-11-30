@@ -1,6 +1,7 @@
 export interface Player {
     id: string;
     name: string;
+    isHuman: boolean;
     connected: boolean;
     hand: Card[];
     tricks: number;
@@ -26,8 +27,9 @@ export interface GameState {
 
 export class Game {
     private state: GameState;
+    private broadcastState: () => void; // Function to send game state updates to all clients
 
-    constructor() {
+    constructor(broadcastState: () => void) {
         this.state = {
             players: {},
             currentRound: 0,
@@ -38,14 +40,16 @@ export class Game {
             phase: 'waiting',
             leadSuit: null,
         };
+        this.broadcastState = broadcastState;
     }
 
-    public addPlayer(id: string, name: string): boolean {
+    public addPlayer(id: string, name: string, isHuman: boolean): boolean {
         if (Object.keys(this.state.players).length >= 6) return false;
         
         this.state.players[id] = {
             id,
             name,
+            isHuman: isHuman,
             connected: true,
             hand: [],
             tricks: 0,
@@ -53,11 +57,20 @@ export class Game {
             score: 0
         };
         
+        this.broadcastState();
         return true;
     }
 
+    public addBotPlayer(): { id: string, name: string, success: boolean } {
+        const botsInGame = Object.values(this.state.players).filter(p => !p.isHuman).length;
+        const botId = `bot-${botsInGame + 1}`;
+        const botName = `Bot ${botsInGame + 1}`;
+        
+        return { id: botId, name: botName, success: this.addPlayer(botId, botName, false)};
+    }
+
     public startGame(): boolean {
-        if (Object.keys(this.state.players).length < 2) return false; //TODO: Change back to 3 after testing is done
+        if (Object.keys(this.state.players).length < 3) return false;
         
         this.state.currentRound = 1;
         this.dealCards();
@@ -68,6 +81,7 @@ export class Game {
         this.state.leadingPlayerId = playerIds[0] ?? null;
         this.state.activePlayerId = playerIds[0] ?? null;
         
+        this.broadcastState();
         return true;
     }
 
@@ -135,7 +149,7 @@ export class Game {
         return deck;
     }
 
-    public placeBid(playerId: string, bid: number): boolean {
+    public async placeBid(playerId: string, bid: number): Promise<boolean> {
         const player = this.state.players[playerId];
         if (!player || this.state.phase !== 'bidding' || playerId !== this.state.activePlayerId) {
             return false;
@@ -154,27 +168,26 @@ export class Game {
             this.state.phase = 'playing';
         }
 
+        this.broadcastState();
+        await this.handleBotTurn();
         return true;
     }
 
-    public playCard(playerId: string, cardIndex: number): { success: boolean, trickComplete?: boolean } {
+    public async playCard(playerId: string, cardIndex: number): Promise<boolean> {
         const player = this.state.players[playerId];
         if (!player || 
             this.state.phase !== 'playing' || 
             playerId !== this.state.activePlayerId ||
             cardIndex < 0 || 
             cardIndex >= player.hand.length) {
-            return { success: false };
+            return false;
         }
 
         const card = player.hand[cardIndex]!;
         
         // Check if player must follow suit
-        if (this.state.leadSuit && 
-            card.suit !== 'special' && 
-            card.suit !== this.state.leadSuit && 
-            player.hand.some(c => c.suit === this.state.leadSuit)) {
-            return { success: false };
+        if (!this.isPlayableCard(card, player.hand)) {
+            return false;
         }
 
         // Remove card from hand and add to current trick
@@ -186,19 +199,48 @@ export class Game {
             this.state.leadSuit = card.suit;
         }
 
-        // If all players have played, don't evaluate trick yet but signal it's complete
         if (this.state.currentTrick.length === Object.keys(this.state.players).length) {
             this.state.phase = 'scoring';
-            return { success: true, trickComplete: true };
+            this.broadcastState();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            this.evaluateTrick();
         } else {
             this.moveToNextPlayer();
-            return { success: true, trickComplete: false };
+            this.broadcastState();
+        }
+
+        await this.handleBotTurn();
+        return true;
+    }
+
+    public async handleBotTurn(): Promise<void> {
+        const activePlayer = this.state.activePlayerId ? this.state.players[this.state.activePlayerId] : null;
+        if (!activePlayer || activePlayer.isHuman) return;
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+        if (this.state.phase === 'bidding') {
+            // Bot bidding logic: bid Math.floor(currentRound/playerCount)
+            const bid = Math.floor(this.state.currentRound / Object.keys(this.state.players).length);
+            await this.placeBid(activePlayer.id, bid);
+        } else if (this.state.phase === 'playing') {
+            // Bot playing logic: play a random valid card
+            const validCards = activePlayer.hand.filter((_, index) => {
+                const card = activePlayer.hand[index]!;
+                return this.isPlayableCard(card, activePlayer.hand);
+            });
+            
+            if (validCards.length > 0) {
+                const randomCardIndex = Math.floor(Math.random() * validCards.length);
+                const selectedCard = validCards[randomCardIndex]!;
+                // Find the index of this card in the original hand
+                const cardIndex = activePlayer.hand.findIndex(c => c.suit === selectedCard.suit && c.value === selectedCard.value);
+                await this.playCard(activePlayer.id, cardIndex);
+            }
         }
     }
 
-    public evaluateTrick(): { winner: string, roundComplete: boolean } {
+    public evaluateTrick(): string {
         const winner = this.determineTrickWinner();
-        let roundComplete = false;
 
         const player = this.state.players[winner];
         if (player) {
@@ -213,10 +255,22 @@ export class Game {
 
         // Check if round is complete
         if (Object.values(this.state.players).every(p => p.hand.length === 0)) {
-            roundComplete = true;
+            this.broadcastState();
+            this.endRound();
+            return winner;
         }
 
-        return { winner, roundComplete };
+        this.broadcastState();
+        return winner;
+    }
+
+    private isPlayableCard(card: Card, playerHand: Card[]): boolean {
+        if (this.state.leadSuit && card.suit !== 'special') {
+            const hasLeadSuit = playerHand.some(c => c.suit === this.state.leadSuit);
+            if (hasLeadSuit && card.suit !== this.state.leadSuit) return false; // Must follow suit if possible
+        }
+
+        return true;
     }
 
     private determineTrickWinner(): string {
@@ -283,6 +337,7 @@ export class Game {
             }
         }
         this.prepareNextRound();
+        this.broadcastState();
     }
 
     private prepareNextRound(): void {
@@ -315,6 +370,7 @@ export class Game {
         }
         
         delete this.state.players[id];
+        this.broadcastState();
         return true;
     }
 
