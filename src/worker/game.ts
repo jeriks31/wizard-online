@@ -1,4 +1,5 @@
 import { ICard, IGameState } from './types';
+import { Bot } from './bot';
 
 export class Game {
     private state: IGameState;
@@ -193,26 +194,15 @@ export class Game {
         const activePlayer = this.state.activePlayerId ? this.state.players[this.state.activePlayerId] : null;
         if (!activePlayer || activePlayer.isHuman) return;
 
-        await new Promise(resolve => setTimeout(resolve, 500));
-        if (this.state.phase === 'bidding') {
-            // Bot bidding logic: bid Math.floor(currentRound/playerCount)
-            const bid = Math.floor(this.state.currentRound / Object.keys(this.state.players).length);
-            await this.placeBid(activePlayer.id, bid);
-        } else if (this.state.phase === 'playing') {
-            // Bot playing logic: play a random valid card
-            const validCards = activePlayer.hand.filter((_, index) => {
-                const card = activePlayer.hand[index]!;
-                return this.isPlayableCard(card, activePlayer.hand);
-            });
-            
-            if (validCards.length > 0) {
-                const randomCardIndex = Math.floor(Math.random() * validCards.length);
-                const selectedCard = validCards[randomCardIndex]!;
-                // Find the index of this card in the original hand
-                const cardIndex = activePlayer.hand.findIndex(c => c.suit === selectedCard.suit && c.value === selectedCard.value);
-                await this.playCard(activePlayer.id, cardIndex);
+        await Bot.handleTurn(
+            this.state,
+            activePlayer.id,
+            {
+                placeBid: (bid) => this.placeBid(activePlayer.id, bid),
+                playCard: (cardIndex) => this.playCard(activePlayer.id, cardIndex),
+                isPlayableCard: (card, hand) => this.isPlayableCard(card, hand)
             }
-        }
+        );
     }
 
     public async evaluateTrick(): Promise<string> {
