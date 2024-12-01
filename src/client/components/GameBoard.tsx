@@ -34,11 +34,9 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                 // Keep the last trick's cards visible
                 setTemporaryTrickCards(oldState.currentTrick);
                 setLastTrickWinner(winner[1].name);
-                setTemporaryTrumpCard(oldState.trumpCard);
                 setTimeout(() => {
                     setLastTrickWinner(null);
                     setTemporaryTrickCards([]);
-                    setTemporaryTrumpCard(null);
                 }, 2000);
             }
         }
@@ -51,11 +49,13 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                 changes[id] = player.score - oldScore;
             });
             setScoreChanges(changes);
+            setTemporaryTrumpCard(oldState.trumpCard);
             
             // Clear score changes and old round state after delay
             setTimeout(() => {
                 setScoreChanges({});
-            }, 5000);
+                setTemporaryTrumpCard(null);
+            }, 2000);
         }
 
         setOldState(gameState);

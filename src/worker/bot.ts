@@ -5,6 +5,9 @@ export class Bot {
      * Determines the bid for a bot player based on the current game state
      */
     static calculateBid(gameState: IGameState, playerId: string): number {
+        const player = gameState.players[playerId];
+        if (!player) return 0;
+
         return Math.floor(gameState.currentRound / Object.keys(gameState.players).length);
     }
 
@@ -13,20 +16,20 @@ export class Bot {
      * Higher number means stronger card
      */
     private static getCardStrength(card: ICard, gameState: IGameState): number {
-        if (card.value === 'wizard') return 999;
-        if (card.value === 'jester') return -1;
+        if (card.value === 'wizard') return (3*13) + 1; // 1 higher than a 13-trump
+        if (card.value === 'jester') return 0;
         
         const numericValue = card.value as number;
         let strength = numericValue;
 
         // Boost strength if it's trump suit
         if (gameState.trumpCard && card.suit === gameState.trumpCard.suit) {
-            strength += 200;
+            strength += (2*13);
         }
 
         // Boost strength if it's the lead suit
         if (gameState.leadSuit && card.suit === gameState.leadSuit) {
-            strength += 100;
+            strength += 13;
         }
 
         return strength;
@@ -55,6 +58,28 @@ export class Bot {
     }
 
     /**
+     * Determines if the bot should try to win this trick based on:
+     * - Number of tricks needed vs remaining
+     * - Returns true with probability = tricksNeeded/tricksRemaining
+     */
+    private static shouldTryToWin(gameState: IGameState, playerId: string): boolean {
+        const player = gameState.players[playerId];
+        if (!player || player.bid === null) return false;
+
+        const tricksNeeded = player.bid - player.tricks;
+        if (tricksNeeded <= 0) return false;
+
+        const tricksRemaining = gameState.currentRound - Object.values(gameState.players)
+            .reduce((sum, p) => sum + p.tricks, 0);
+        
+        if (tricksNeeded >= tricksRemaining) return true;
+        
+        // Calculate probability based on how many tricks we need vs remaining
+        const probability = tricksNeeded / tricksRemaining;
+        return Math.random() < probability;
+    }
+
+    /**
      * Selects which card the bot should play based on the current game state
      * Returns the index of the card in the player's hand
      */
@@ -67,7 +92,7 @@ export class Bot {
         if (validCards.length === 0) return -1;
 
         // Determine if we want to win this trick
-        const wantToWin = player.bid !== null && player.tricks < player.bid;
+        const wantToWin = this.shouldTryToWin(gameState, playerId);
 
         // Rank cards by strength
         const rankedCards = validCards.map(card => ({
@@ -127,7 +152,11 @@ export class Bot {
 
         if (gameState.phase === 'bidding') {
             const bid = this.calculateBid(gameState, playerId);
-            await actions.placeBid(bid);
+            if (!(await actions.placeBid(bid))){
+                if (!(await actions.placeBid(bid + 1))){
+                    await actions.placeBid(bid - 1);
+                }
+            }
         } else if (gameState.phase === 'playing') {
             const cardIndex = this.selectCard(gameState, playerId, actions.isPlayableCard);
             if (cardIndex >= 0) {

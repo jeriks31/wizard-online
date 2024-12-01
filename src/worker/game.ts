@@ -135,6 +135,20 @@ export class Game {
             return false;
         }
 
+        // Check if this is the last player to bid
+        const unbidPlayers = Object.values(this.state.players).filter(p => p.bid === null);
+        if (unbidPlayers.length === 1 && unbidPlayers[0]?.id === playerId) {
+            // Calculate total bids from other players
+            const totalBidsFromOthers = Object.values(this.state.players)
+                .filter(p => p.bid !== null)
+                .reduce((sum, p) => sum + (p.bid ?? 0), 0);
+            
+            // If this bid would make total bids equal current round, reject it
+            if (totalBidsFromOthers + bid === this.state.currentRound) {
+                return false;
+            }
+        }
+
         player.bid = bid;
         this.moveToNextPlayer();
 
