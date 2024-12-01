@@ -203,7 +203,7 @@ export class Game {
             this.state.phase = 'scoring';
             this.broadcastState();
             await new Promise(resolve => setTimeout(resolve, 100));
-            this.evaluateTrick();
+            await this.evaluateTrick();
         } else {
             this.moveToNextPlayer();
             this.broadcastState();
@@ -239,7 +239,7 @@ export class Game {
         }
     }
 
-    public evaluateTrick(): string {
+    public async evaluateTrick(): Promise<string> {
         const winner = this.determineTrickWinner();
 
         const player = this.state.players[winner];
@@ -256,6 +256,7 @@ export class Game {
         // Check if round is complete
         if (Object.values(this.state.players).every(p => p.hand.length === 0)) {
             this.broadcastState();
+            await new Promise(resolve => setTimeout(resolve, 100));
             this.endRound();
             return winner;
         }
