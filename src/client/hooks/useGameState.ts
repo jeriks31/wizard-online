@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, GameState } from '../../worker/game';
-import { ClientMessage, ServerMessage } from '../../worker/types';
+import { IGameState, ClientMessage, ServerMessage } from '../../worker/types';
 
 interface GameStateHook {
-    gameState: GameState | null;
+    gameState: IGameState | null;
     isConnected: boolean;
     error: string | null;
     playerId: string | null;
@@ -21,7 +20,7 @@ const WORKER_URL = process.env.NODE_ENV === 'development'
 
 export function useGameState(gameId: string): GameStateHook {
     const [socket, setSocket] = useState<WebSocket | null>(null);
-    const [gameState, setGameState] = useState<GameState | null>(null);
+    const [gameState, setGameState] = useState<IGameState | null>(null);
     const [playerId, setPlayerId] = useState<string | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -86,6 +85,7 @@ export function useGameState(gameId: string): GameStateHook {
     const sendMessage = useCallback((message: ClientMessage) => {
         if (socket?.readyState === WebSocket.OPEN) {
             socket.send(JSON.stringify(message));
+            setError(null);
         } else {
             // If not connected, retry after a short delay
             setTimeout(() => {

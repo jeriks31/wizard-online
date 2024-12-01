@@ -1,8 +1,7 @@
-import React from 'react';
-import { Card as CardType } from '../../worker/game';
+import { ICard } from '../../worker/types';
 
 interface CardProps {
-    card: CardType;
+    card: ICard;
     isPlayable?: boolean;
     onClick?: () => void;
 }

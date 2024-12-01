@@ -1,32 +1,7 @@
-export interface Player {
-    id: string;
-    name: string;
-    isHuman: boolean;
-    connected: boolean;
-    hand: Card[];
-    tricks: number;
-    bid: number | null;
-    score: number;
-}
-
-export interface Card {
-    suit: 'hearts' | 'diamonds' | 'clubs' | 'spades' | 'special';
-    value: number | 'wizard' | 'jester';
-}
-
-export interface GameState {
-    players: Record<string, Player>;
-    currentRound: number;
-    trumpCard: Card | null;
-    currentTrick: Card[];
-    leadingPlayerId: string | null;
-    activePlayerId: string | null;
-    phase: 'waiting' | 'bidding' | 'playing' | 'scoring' | 'finished';
-    leadSuit: string | null;
-}
+import { ICard, IGameState } from './types';
 
 export class Game {
-    private state: GameState;
+    private state: IGameState;
     private broadcastState: () => void; // Function to send game state updates to all clients
 
     constructor(broadcastState: () => void) {
@@ -120,8 +95,8 @@ export class Game {
         this.state.trumpCard = deck.pop() ?? null;
     }
 
-    private createDeck(): Card[] {
-        const deck: Card[] = [];
+    private createDeck(): ICard[] {
+        const deck: ICard[] = [];
         const suits: ('hearts' | 'diamonds' | 'clubs' | 'spades')[] = ['hearts', 'diamonds', 'clubs', 'spades'];
         
         // Add regular cards
@@ -140,7 +115,7 @@ export class Game {
         return deck;
     }
 
-    private shuffleDeck(deck: Card[]): Card[] {
+    private shuffleDeck(deck: ICard[]): ICard[] {
         // Fisher-Yates shuffle
         for (let i = deck.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -192,6 +167,7 @@ export class Game {
 
         // Remove card from hand and add to current trick
         player.hand.splice(cardIndex, 1);
+        card.playedBy = playerId;
         this.state.currentTrick.push(card);
 
         // Set lead suit if this is the first non-special card
@@ -265,7 +241,7 @@ export class Game {
         return winner;
     }
 
-    private isPlayableCard(card: Card, playerHand: Card[]): boolean {
+    private isPlayableCard(card: ICard, playerHand: ICard[]): boolean {
         if (this.state.leadSuit && card.suit !== 'special') {
             const hasLeadSuit = playerHand.some(c => c.suit === this.state.leadSuit);
             if (hasLeadSuit && card.suit !== this.state.leadSuit) return false; // Must follow suit if possible
@@ -275,58 +251,45 @@ export class Game {
     }
 
     private determineTrickWinner(): string {
-        const playerIds = Object.keys(this.state.players);
-        const startPlayerIndex = playerIds.indexOf(this.state.leadingPlayerId!);
-        
-        // Get the cards in order of play, with their corresponding player IDs
-        const cardsWithPlayers = this.state.currentTrick.map((card, index) => {
-            const playerIndex = (startPlayerIndex + index) % playerIds.length;
-            return {
-                card,
-                playerId: playerIds[playerIndex]!
-            };
-        });
-
         // Check for wizards first
-        const wizardPlays = cardsWithPlayers.filter(play => play.card.value === 'wizard');
-        if (wizardPlays.length > 0) {
-            // Last wizard played wins
-            return wizardPlays[wizardPlays.length - 1]!.playerId;
+        const lastWizard = [...this.state.currentTrick].reverse().find(card => card.value === 'wizard');
+        if (lastWizard) {
+            return lastWizard.playedBy!;
         }
 
         // If all cards are jesters, the first player (leader) wins
-        if (cardsWithPlayers.every(play => play.card.value === 'jester')) {
+        if (this.state.currentTrick.every(card => card.value === 'jester')) {
             return this.state.leadingPlayerId!;
         }
 
-        let winningPlay = cardsWithPlayers[0]!;
+        let winningCard = this.state.currentTrick[0]!;
         
-        for (const play of cardsWithPlayers) {
-            if (play.card.value === 'jester') continue;
+        for (const card of this.state.currentTrick) {
+            if (card.value === 'jester') continue;
             
-            // If we haven't set a non-jester winning play yet
-            if (winningPlay.card.value === 'jester') {
-                winningPlay = play;
+            // If we haven't set a non-jester winning card yet
+            if (winningCard.value === 'jester') {
+                winningCard = card;
                 continue;
             }
 
             // Handle trump suit
-            if (play.card.suit === this.state.trumpCard?.suit && 
-                winningPlay.card.suit !== this.state.trumpCard?.suit) {
-                winningPlay = play;
+            if (card.suit === this.state.trumpCard?.suit && 
+                winningCard.suit !== this.state.trumpCard?.suit) {
+                winningCard = card;
                 continue;
             }
 
             // Handle same suit comparison
-            if (play.card.suit === winningPlay.card.suit && 
-                typeof play.card.value === 'number' && 
-                typeof winningPlay.card.value === 'number' && 
-                play.card.value > winningPlay.card.value) {
-                winningPlay = play;
+            if (card.suit === winningCard.suit && 
+                typeof card.value === 'number' && 
+                typeof winningCard.value === 'number' && 
+                card.value > winningCard.value) {
+                winningCard = card;
             }
         }
 
-        return winningPlay.playerId;
+        return winningCard.playedBy!;
     }
 
     public endRound(): void {
@@ -375,7 +338,7 @@ export class Game {
         return true;
     }
 
-    public getGameState(playerId: string): GameState {
+    public getGameState(playerId: string): IGameState {
         const player = this.state.players[playerId];
         if (!player) throw new Error('Player not found');
 

@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Card as CardType, GameState } from '../../worker/game';
+import { ICard, IGameState } from '../../worker/types';
 import { Card } from './Card';
 import { AnimatedStatusText } from './AnimatedStatusText';
 
 interface GameBoardProps {
-    gameState: GameState;
+    gameState: IGameState;
     playerId: string;
     onPlaceBid: (bid: number) => void;
     onPlayCard: (cardIndex: number) => void;
 }
 
 export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameBoardProps) {
-    const [oldState, setOldState] = useState<GameState | null>(null);
+    const [oldState, setOldState] = useState<IGameState | null>(null);
     const [bidError, setBidError] = useState<string | null>(null);
 
     const [lastTrickWinner, setLastTrickWinner] = useState<string | null>(null);
     const [scoreChanges, setScoreChanges] = useState<Record<string, number>>({});
-    const [temporaryTrickCards, setTemporaryTrickCards] = useState<CardType[]>([]);
-    const [temporaryTrumpCard, setTemporaryTrumpCard] = useState<CardType | null>(null);
+    const [temporaryTrickCards, setTemporaryTrickCards] = useState<ICard[]>([]);
+    const [temporaryTrumpCard, setTemporaryTrumpCard] = useState<ICard | null>(null);
     const isPlayerTurn = gameState.activePlayerId === playerId;
 
     useEffect(() => {
@@ -72,7 +72,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
         }
     };
 
-    const isCardPlayable = (card: CardType, index: number) => {
+    const isCardPlayable = (card: ICard, index: number) => {
         if (!isPlayerTurn || gameState.phase !== 'playing') return false;
         
         // First card of the trick
@@ -147,6 +147,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
                             </span>
                             <div className="flex gap-2">
                                 {(temporaryTrickCards.length > 0 ? temporaryTrickCards : gameState.currentTrick).map((card, index) => (
+                                    // TODO: add name of player who played the card
                                     <Card key={index} card={card} />
                                 ))}
                             </div>
@@ -173,6 +174,7 @@ export function GameBoard({ gameState, playerId, onPlaceBid, onPlayCard }: GameB
             {/* Bidding UI */}
             {gameState.phase === 'bidding' && !temporaryTrumpCard && isPlayerTurn && (
                 <div className="mb-4">
+                    <h3 className="text-lg font-bold mb-2">Choose your bid</h3>
                     <div className="flex flex-col gap-2">
                         <div className="flex flex-wrap gap-2">
                             {(() => {
