@@ -22,6 +22,18 @@ export interface ISpectator {
     connected: boolean;
 }
 
+export interface IPlayerRoundResult {
+    playerId: string;
+    bid: number;
+    tricks: number;
+    score: number;
+}
+
+export interface IRoundHistory {
+    roundNumber: number;
+    playerResults: IPlayerRoundResult[];
+}
+
 export interface IGameState {
     players: Record<string, IPlayer>;
     spectators: Record<string, ISpectator>;
@@ -32,6 +44,7 @@ export interface IGameState {
     activePlayerId: string | null;
     phase: 'waiting' | 'bidding' | 'playing' | 'scoring' | 'finished';
     leadSuit: string | null;
+    roundHistory: IRoundHistory[]; //Book of lies
 }
 
 // Message Types

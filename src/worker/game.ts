@@ -1,4 +1,4 @@
-import { ICard, IGameState } from './types';
+import { ICard, IGameState, IPlayerRoundResult } from './types';
 import { Bot } from './bot';
 
 export class Game {
@@ -16,6 +16,7 @@ export class Game {
             activePlayerId: null,
             phase: 'waiting',
             leadSuit: null,
+            roundHistory: [],
         };
         this.broadcastState = broadcastState;
     }
@@ -325,8 +326,23 @@ export class Game {
                 player.score -= Math.abs(player.bid! - player.tricks) * 10;
             }
         }
+        this.recordRoundResults();
         this.prepareNextRound();
         this.broadcastState();
+    }
+
+    private recordRoundResults() {
+        const playerResults: IPlayerRoundResult[] = Object.entries(this.state.players).map(([playerId, player]) => ({
+            playerId,
+            bid: player.bid || 0,
+            tricks: player.tricks,
+            score: player.score
+        }));
+
+        this.state.roundHistory.push({
+            roundNumber: this.state.currentRound,
+            playerResults
+        });
     }
 
     private prepareNextRound(): void {
