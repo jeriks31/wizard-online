@@ -8,7 +8,16 @@ export class Bot {
         const player = gameState.players[playerId];
         if (!player) return 0;
 
-        return Math.floor(gameState.currentRound / Object.keys(gameState.players).length);
+        let guaranteedWins = 0;
+        for (const card of player.hand) {
+            // Wizards are guaranteed wins
+            if (this.getCardStrength(card, gameState) >= 39) { // wizards and trump13 are "guaranteed" wins
+                guaranteedWins += 1;
+            }
+        }
+        // Assume slightly less than average winrate for remaining cards
+        const remainingCards = player.hand.length - guaranteedWins;
+        return guaranteedWins + Math.floor(remainingCards / Object.keys(gameState.players).length * 0.8);
     }
 
     /**
@@ -23,7 +32,7 @@ export class Bot {
         let strength = numericValue;
 
         // Boost strength if it's trump suit
-        if (gameState.trumpCard && card.suit === gameState.trumpCard.suit) {
+        if (gameState.trumpCard && gameState.trumpCard.suit !== 'special' && card.suit === gameState.trumpCard.suit) {
             strength += (2*13);
         }
 
