@@ -16,8 +16,15 @@ export interface IPlayer {
     score: number;
 }
 
+export interface ISpectator {
+    id: string;
+    name: string;
+    connected: boolean;
+}
+
 export interface IGameState {
     players: Record<string, IPlayer>;
+    spectators: Record<string, ISpectator>;
     currentRound: number;
     trumpCard: ICard | null;
     currentTrick: ICard[];
@@ -30,6 +37,7 @@ export interface IGameState {
 // Message Types
 export type ClientMessage = 
     | { type: 'join'; name: string }
+    | { type: 'spectate'; name: string }
     | { type: 'start_game' }
     | { type: 'place_bid'; bid: number }
     | { type: 'play_card'; cardIndex: number }
@@ -39,7 +47,7 @@ export type ServerMessage =
     | { type: 'game_state'; state: IGameState }
     | { type: 'error'; message: string }
     | { type: 'join_success'; playerId: string }
-    | { type: 'player_joined'; id: string; name: string }
+    | { type: 'player_joined'; id: string; name: string; isSpectator: boolean }
     | { type: 'player_left'; id: string; name: string }
     | { type: 'game_started' }
     | { type: 'bid_placed'; playerId: string; bid: number }

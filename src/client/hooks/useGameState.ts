@@ -12,6 +12,7 @@ interface GameStateHook {
     addBotPlayer: () => void;
     placeBid: (bid: number) => void;
     playCard: (cardIndex: number) => void;
+    spectate: () => void;
 }
 
 const WORKER_URL = process.env.NODE_ENV === 'development'
@@ -119,6 +120,11 @@ export function useGameState(gameId: string): GameStateHook {
         sendMessage({ type: 'play_card', cardIndex });
     }, [sendMessage]);
 
+    const spectate = useCallback(() => {
+        if (!playerId) return;
+        sendMessage({ type: 'spectate', name: gameState?.players[playerId]?.name ?? '' });
+    }, [playerId, gameState, sendMessage]);
+
     return {
         gameState,
         isConnected,
@@ -129,6 +135,7 @@ export function useGameState(gameId: string): GameStateHook {
         startGame,
         addBotPlayer,
         placeBid,
-        playCard
+        playCard,
+        spectate
     };
 }

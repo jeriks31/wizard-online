@@ -136,15 +136,36 @@ class GameRoom {
                     this.broadcast({ 
                         type: 'player_joined',
                         id: session.id,
-                        name: message.name
+                        name: message.name,
+                        isSpectator: false
                     });
                 } else {
                     const gameState = this.game.getGameState(session.id);
-                    const playerCount = Object.keys(gameState.players!).length;
+                    const playerCount = Object.keys(gameState.players).length;
                     const error = playerCount >= 6 
                         ? 'Game is full (maximum 6 players)' 
                         : 'A player with that name already exists';
                     this.sendError(session, error);
+                }
+                break;
+
+            case 'spectate':
+                session.name = message.name;
+                if (this.game.addSpectator(session.id, message.name)) {
+                    // Send success message to the joining spectator
+                    this.sendMessage(session, {
+                        type: 'join_success',
+                        playerId: session.id
+                    });
+                    // Broadcast to all players that someone joined as spectator
+                    this.broadcast({ 
+                        type: 'player_joined',
+                        id: session.id,
+                        name: message.name,
+                        isSpectator: true
+                    });
+                } else {
+                    this.sendError(session, 'Failed to join as spectator');
                 }
                 break;
 
@@ -153,7 +174,7 @@ class GameRoom {
                     this.sendError(session, 'Invalid game state, create a new lobby');
                     return;
                 }
-                if (this.game.startGame()) {
+                if (await this.game.startGame()) {
                     this.gameStarted = true;
                 } else {
                     this.sendError(session, 'Not enough players to start');
@@ -190,7 +211,8 @@ class GameRoom {
                     this.broadcast({
                         type: 'player_joined',
                         id: id,
-                        name: name
+                        name: name,
+                        isSpectator: false
                     });
                 } else {
                     this.sendError(session, "Failed to add bot player");

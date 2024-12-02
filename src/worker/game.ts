@@ -8,6 +8,7 @@ export class Game {
     constructor(broadcastState: () => void) {
         this.state = {
             players: {},
+            spectators: {},
             currentRound: 0,
             trumpCard: null,
             currentTrick: [],
@@ -25,12 +26,31 @@ export class Game {
         this.state.players[id] = {
             id,
             name,
-            isHuman: isHuman,
+            isHuman,
             connected: true,
             hand: [],
             tricks: 0,
             bid: null,
             score: 0
+        };
+        
+        this.broadcastState();
+        return true;
+    }
+
+    public addSpectator(id: string, name: string): boolean {
+        // If they're already a spectator, return false
+        if (id in this.state.spectators) return false;
+
+        // If they're currently a player, remove them from players first
+        if (id in this.state.players) {
+            delete this.state.players[id];
+        }
+
+        this.state.spectators[id] = {
+            id,
+            name,
+            connected: true
         };
         
         this.broadcastState();
@@ -45,7 +65,7 @@ export class Game {
         return { id: botId, name: botName, success: this.addPlayer(botId, botName, false)};
     }
 
-    public startGame(): boolean {
+    public async startGame(): Promise<boolean> {
         if (Object.keys(this.state.players).length < 3) return false;
         
         this.state.currentRound = 1;
@@ -58,6 +78,7 @@ export class Game {
         this.state.activePlayerId = playerIds[0] ?? null;
         
         this.broadcastState();
+        await this.handleBotTurn();
         return true;
     }
 
@@ -333,19 +354,20 @@ export class Game {
     }
 
     public removePlayer(id: string): boolean {
-        if (!(id in this.state.players)) {
-            return false;
+        if (id in this.state.players) {
+            delete this.state.players[id];
+            this.broadcastState();
+            return true;
         }
-        
-        delete this.state.players[id];
-        this.broadcastState();
-        return true;
+        if (id in this.state.spectators) {
+            delete this.state.spectators[id];
+            this.broadcastState();
+            return true;
+        }
+        return false;
     }
 
     public getGameState(playerId: string): IGameState {
-        const player = this.state.players[playerId];
-        if (!player) throw new Error('Player not found');
-
         // Return a copy of the state but without the other players' hands and without the deck
         return {
             ...this.state,

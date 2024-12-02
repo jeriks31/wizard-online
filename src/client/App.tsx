@@ -41,7 +41,8 @@ function AppContent() {
         startGame,
         addBotPlayer,
         placeBid,
-        playCard
+        playCard,
+        spectate
     } = useGameState(gameId);
 
     const handleJoin = (e: React.FormEvent) => {
@@ -212,21 +213,34 @@ function AppContent() {
                 {gameState.phase === 'waiting' && (
                     <div className="mb-4 p-4 bg-card-bg rounded-lg">
                         <h2 className="text-xl font-bold mb-2">Waiting for players...</h2>
-                        <p className="mb-4">Players: {Object.keys(gameState.players || {}).length}/6</p>
-                        <button 
-                            onClick={startGame}
-                            className="btn btn-primary"
-                            disabled={Object.keys(gameState.players || {}).length < 3}
-                        >
-                            Start Game
-                        </button>
-                        <button 
-                            onClick={addBotPlayer}
-                            className="btn btn-secondary"
-                            disabled={Object.keys(gameState.players || {}).length >= 6}
-                        >
-                            Add Bot
-                        </button>
+                        <p className="mb-4">
+                            Players: {Object.keys(gameState.players || {}).length}/6
+                            {Object.keys(gameState.spectators || {}).length > 0 && 
+                                ` • Spectators: ${Object.keys(gameState.spectators).length}`}
+                        </p>
+                        <div className="flex gap-2">
+                            <button 
+                                onClick={startGame}
+                                className="btn btn-primary"
+                                disabled={Object.keys(gameState.players || {}).length < 3}
+                            >
+                                Start Game
+                            </button>
+                            <button 
+                                onClick={addBotPlayer}
+                                className="btn btn-secondary"
+                                disabled={Object.keys(gameState.players || {}).length >= 6}
+                            >
+                                Add Bot
+                            </button>
+                            <button 
+                                onClick={spectate}
+                                className="btn btn-secondary"
+                                disabled={!playerId || playerId in (gameState.spectators || {})}
+                            >
+                                Become Spectator
+                            </button>
+                        </div>
                     </div>
                 )}
 
