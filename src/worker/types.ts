@@ -14,6 +14,7 @@ export interface IPlayer {
     tricks: number;
     bid: number | null;
     score: number;
+    initialHandStrength: number;  // Strength of hand at start of round
 }
 
 export interface ISpectator {
@@ -27,11 +28,13 @@ export interface IPlayerRoundResult {
     bid: number;
     tricks: number;
     score: number;
+    handStrength: number;    // Total strength of the hand at start of round
 }
 
 export interface IRoundHistory {
     roundNumber: number;
     playerResults: IPlayerRoundResult[];
+    playerCount: number;     // Number of players in the game
 }
 
 export interface IGameState {

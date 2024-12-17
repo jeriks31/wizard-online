@@ -32,7 +32,8 @@ export class Game {
             hand: [],
             tricks: 0,
             bid: null,
-            score: 0
+            score: 0,
+            initialHandStrength: 0
         };
         
         this.broadcastState();
@@ -85,12 +86,13 @@ export class Game {
 
     private dealCards(): void {
         let deck = this.shuffleDeck(this.createDeck());
-        
+
         // Clear existing hands
         for (const player of Object.values(this.state.players)) {
             player.hand = [];
             player.tricks = 0;
             player.bid = null;
+            player.initialHandStrength = 0;
         }
 
         // Deal cards based on current round
@@ -102,6 +104,7 @@ export class Game {
                     const player = this.state.players[playerId];
                     if (player) {
                         player.hand.push(card);
+                        player.initialHandStrength += Bot.getCardStrength(card, this.state);
                         player.hand.sort((a, b) => {
                             if (a.suit < b.suit) return -1;
                             if (a.suit > b.suit) return 1;
@@ -332,17 +335,24 @@ export class Game {
     }
 
     private recordRoundResults() {
+        
         const playerResults: IPlayerRoundResult[] = Object.entries(this.state.players).map(([playerId, player]) => ({
             playerId,
             bid: player.bid || 0,
             tricks: player.tricks,
-            score: player.score
+            score: player.score,
+            handStrength: player.initialHandStrength
         }));
 
         this.state.roundHistory.push({
             roundNumber: this.state.currentRound,
-            playerResults
+            playerResults,
+            playerCount: Object.keys(this.state.players).length
         });
+        // For each player print csv playerCount,roundNumber,handStrength,tricks
+        for (const result of playerResults) {
+            console.log(`${playerResults.length},${this.state.currentRound},${result.handStrength},${result.tricks}`);
+        }
     }
 
     private prepareNextRound(): void {

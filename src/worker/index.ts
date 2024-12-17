@@ -20,20 +20,21 @@ export class GameManager {
 
     async fetch(request: Request) {
         const url = new URL(request.url);
-        const gameId = url.searchParams.get('gameId');
-
-        if (!gameId) {
-            return new Response('Game ID required', { status: 400 });
-        }
-
-        // Get or create game room
-        let gameRoom = this.rooms.get(gameId);
-        if (!gameRoom) {
-            gameRoom = new GameRoom();
-            this.rooms.set(gameId, gameRoom);
-        }
 
         if (url.pathname === '/websocket') {
+            const gameId = url.searchParams.get('gameId');
+
+            if (!gameId) {
+                return new Response('Game ID required', { status: 400 });
+            }
+
+            // Get or create game room
+            let gameRoom = this.rooms.get(gameId);
+            if (!gameRoom) {
+                gameRoom = new GameRoom();
+                this.rooms.set(gameId, gameRoom);
+            }
+
             if (request.headers.get('Upgrade') !== 'websocket') {
                 return new Response('Expected websocket', { status: 400 });
             }
@@ -44,6 +45,47 @@ export class GameManager {
             return new Response(null, {
                 status: 101,
                 webSocket: client,
+            });
+        }
+
+        if (url.pathname === '/simulate') {
+            const bots = parseInt(url.searchParams.get('bots') || '3');
+            const games = parseInt(url.searchParams.get('games') || '1');
+
+            if (isNaN(bots) || bots < 3 || bots > 6) {
+                return new Response('Invalid number of bots (must be between 3 and 6)', { status: 400 });
+            }
+
+            if (isNaN(games) || games < 1) {
+                return new Response('Invalid number of games (must be at least 1)', { status: 400 });
+            }
+
+            const results = [];
+            for (let i = 0; i < games; i++) {
+                const game = new Game(() => {});  // Empty broadcast function since this is a simulation
+                
+                // Add bots
+                for (let j = 0; j < bots; j++) {
+                    game.addPlayer(`bot${j}`, `Bot ${j + 1}`, false);
+                }
+
+                // Start and play the game
+                await game.startGame();
+                
+                // Store the final scores
+                const finalState = game.getGameState('');
+                const gameResult = {
+                    gameNumber: i + 1,
+                    scores: Object.entries(finalState.players).map(([id, player]) => ({
+                        name: player.name,
+                        score: player.score
+                    }))
+                };
+                results.push(gameResult);
+            }
+
+            return new Response(JSON.stringify(results), {
+                headers: { 'Content-Type': 'application/json' }
             });
         }
 

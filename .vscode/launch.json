@@ -1,0 +1,17 @@
+{
+    "configurations": [
+        {
+            "name": "Debug Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Debug play_game.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/ml/play_game.py",
+        }
+    ]
+}

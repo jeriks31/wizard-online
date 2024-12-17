@@ -168,3 +168,7 @@ dist
 
 .wrangler
 .DS_Store
+ml/venv/
+ml/models/checkpoints/
+ml/models_v1/checkpoints/
+ml/__pycache__/

@@ -8,6 +8,7 @@ export class Bot {
         const player = gameState.players[playerId];
         if (!player) return 0;
 
+        /*
         let guaranteedWins = 0;
         for (const card of player.hand) {
             // Wizards are guaranteed wins
@@ -18,13 +19,30 @@ export class Bot {
         // Assume slightly less than average winrate for remaining cards
         const remainingCards = player.hand.length - guaranteedWins;
         return guaranteedWins + Math.floor(remainingCards / Object.keys(gameState.players).length * 0.8);
+        */
+
+        const averageCardStrength = player.hand.reduce((sum, card) => sum + this.getCardStrength(card, gameState), 0) / player.hand.length;
+        if (averageCardStrength <= 5) return 0;
+        if (averageCardStrength >= 39) return gameState.currentRound;
+        let expectedWinRate = 0;
+        switch (Object.keys(gameState.players).length){
+            case 3:
+                expectedWinRate = 0.1656 + (0.0126 * averageCardStrength);
+            case 4:
+                expectedWinRate = 0.1088 + (0.0110 * averageCardStrength);
+            case 5: // TODO
+            case 6: // TODO
+            default:
+                expectedWinRate = 1 / Object.keys(gameState.players).length;
+        }
+        return Math.round(expectedWinRate * gameState.currentRound);
     }
 
     /**
      * Ranks a card's strength in the current game context
      * Higher number means stronger card
      */
-    private static getCardStrength(card: ICard, gameState: IGameState): number {
+    public static getCardStrength(card: ICard, gameState: IGameState): number {
         if (card.value === 'wizard') return (3*13) + 1; // 1 higher than a 13-trump
         if (card.value === 'jester') return 0;
         
@@ -84,7 +102,7 @@ export class Bot {
         if (tricksNeeded >= tricksRemaining) return true;
         
         // Calculate probability based on how many tricks we need vs remaining
-        const probability = tricksNeeded / tricksRemaining;
+        const probability = 2*tricksNeeded / tricksRemaining;
         return Math.random() < probability;
     }
 
@@ -157,7 +175,7 @@ export class Bot {
         isPlayableCard: (card: ICard, hand: ICard[]) => boolean
     }): Promise<void> {
         // Add delay to make bot moves feel more natural
-        await new Promise(resolve => setTimeout(resolve, 500));
+        //await new Promise(resolve => setTimeout(resolve, 500));
 
         if (gameState.phase === 'bidding') {
             const bid = this.calculateBid(gameState, playerId);
